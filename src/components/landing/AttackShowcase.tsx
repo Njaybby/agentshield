@@ -136,13 +136,13 @@ function Case({ scenario, verdict }: { scenario: Scenario; verdict?: Verdict }) 
             <div className="mt-2">
               <DecisionBadge decision={verdict.decision} size="lg" />
             </div>
-            <p className="mt-3 text-[15px] leading-relaxed text-ink">{verdict.operator_summary}</p>
+            <p className="mt-3 text-[15px] leading-relaxed text-ink [overflow-wrap:anywhere]">{verdict.operator_summary}</p>
             {failing.length > 0 && (
               <ul className="mt-4 space-y-1.5">
                 {failing.slice(0, 4).map((c) => (
-                  <li key={c.id} className="flex gap-2 text-[13px]">
-                    <span className="shrink-0 font-mono text-faint">{c.id}</span>
-                    <span className="min-w-0 text-mute">{c.detail}</span>
+                  <li key={c.id} className="flex flex-col gap-0.5 text-[13px] sm:flex-row sm:gap-2">
+                    <span className="shrink-0 font-mono text-xs text-faint sm:text-[13px]">{c.id}</span>
+                    <span className="min-w-0 text-mute [overflow-wrap:anywhere]">{c.detail}</span>
                   </li>
                 ))}
               </ul>
