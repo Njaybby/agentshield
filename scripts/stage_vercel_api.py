@@ -31,7 +31,7 @@ dependencies = [
 """
 
 # Fluid compute's default duration covers agent runs (10-40s), so no functions override is needed.
-VERCEL_JSON = {"$schema": "https://openapi.vercel.sh/vercel.json", "framework": "fastapi"}
+VERCEL_JSON = {"$schema": "https://openapi.vercel.sh/vercel.json", "framework": "fastapi", "regions": ["lhr1"]}
 
 
 def main() -> None:

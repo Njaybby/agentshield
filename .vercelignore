@@ -9,3 +9,4 @@ contracts
 tests
 .next
 **/__pycache__
+.clickhouse/

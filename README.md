@@ -102,6 +102,11 @@ Foundry project in `contracts/`.
 - `QuerySettlement.sol`: on-chain pay-per-query with exact pricing and refunds.
 - `forge test` runs 16 tests. `script/Deploy.s.sol` deploys both and seeds three demo IOCs.
 
+Deployed on Base Sepolia:
+
+- ReputationRegistry: [`0x7F030f959769c2eF4CCC05DB62723BAA1E5Fe82e`](https://sepolia.basescan.org/address/0x7F030f959769c2eF4CCC05DB62723BAA1E5Fe82e)
+- QuerySettlement: [`0x20fC5f16755226068CEaF341299E3428aaeda09C`](https://sepolia.basescan.org/address/0x20fC5f16755226068CEaF341299E3428aaeda09C)
+
 ## Running locally
 
 Python 3.12, Node 20+. Docker for ClickHouse and Foundry for contracts are optional.
