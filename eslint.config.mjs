@@ -18,7 +18,7 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "agentcore/**",
-      "contracts/**",
+      "contracts/**", "sdk/**", ".next-*/**",
       "next-env.d.ts",
     ],
   },

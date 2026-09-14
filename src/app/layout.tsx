@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,17 +12,15 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const instrument = Instrument_Serif({
-  variable: "--font-instrument",
-  subsets: ["latin"],
-  weight: "400",
-  style: ["normal", "italic"],
-});
-
 export const metadata: Metadata = {
-  title: "AgentShield | NOKARA Labs",
+  title: "AgentShield | Pre-signing review for trading agents",
   description:
-    "Pre-trade firewall for autonomous trading agents on Base: a Strands agent on Bedrock AgentCore that blocks prompt-injection drains and honeypots before the agent signs.",
+    "A Strands agent that reviews every transaction your trading agents propose, blocks drains and honeypots, and pages you only when a human is needed.",
+  openGraph: {
+    title: "AgentShield",
+    description: "Nothing your trading agent proposes gets signed until it has been checked.",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -31,12 +29,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="bg-[#0a0a0a]">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${instrument.variable} antialiased`}
-      >
-        {children}
-      </body>
+    <html lang="en" className="bg-[#0a0a0b]">
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>{children}</body>
     </html>
   );
 }

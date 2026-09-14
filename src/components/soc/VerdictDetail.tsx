@@ -1,21 +1,26 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import type { Check, TraceStep, Verdict } from "@/lib/types";
-import { StatusTag, decisionBg, decisionBorder, decisionText } from "@/components/DecisionBadge";
-import { ExtLink, JsonBlock, Label, Panel } from "./Panel";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { Check as CheckIcon, Copy, X } from "@phosphor-icons/react";
+import type { Check, Scenario, Verdict } from "@/lib/types";
+import { hasError, rpc } from "@/lib/rpc";
+import { DecisionBadge, StatusTag } from "@/components/DecisionBadge";
+import { Tag } from "@/components/ui/States";
+import { addressUrl, formatEth, ms, networkLabel, relTime, short } from "@/lib/format";
+import { ExtLink, JsonBlock } from "./Panel";
 import { ReviewControls } from "./ReviewControls";
-import { addressUrl, clock, formatEth, ms, networkLabel, short } from "@/lib/format";
+import { VerdictTrace } from "./VerdictTrace";
 
 const SEV_RANK: Record<Check["severity"], number> = { critical: 0, high: 1, medium: 2, info: 3 };
-const SEV_CLASS: Record<Check["severity"], string> = {
-  critical: "text-block",
-  high: "text-[#f87171]",
-  medium: "text-quarantine",
-  info: "text-mute",
+const SEV_TAG: Record<Check["severity"], string> = {
+  critical: "border-block/35 bg-block/10 text-block",
+  high: "border-block/25 text-block",
+  medium: "border-quarantine/35 bg-quarantine/10 text-quarantine",
+  info: "border-line-strong text-faint",
 };
 
-const seenTraces = new Set<string>();
+const FOCUSABLE = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export function VerdictDrawer({
   verdict,
@@ -26,535 +31,634 @@ export function VerdictDrawer({
   onClose: () => void;
   onUpdate: (v: Verdict) => void;
 }) {
+  const reduce = useReducedMotion();
+  const panelRef = useRef<HTMLDivElement>(null);
+  const open = Boolean(verdict);
+
   useEffect(() => {
-    if (!verdict) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
+    if (!open) return;
+    const restore = document.activeElement as HTMLElement | null;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    const focusTimer = window.setTimeout(() => panelRef.current?.querySelector<HTMLElement>("[data-autofocus]")?.focus(), 30);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab" || !panelRef.current) return;
+      const nodes = Array.from(panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((n) => n.offsetParent !== null);
+      if (nodes.length === 0) return;
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
     return () => {
+      window.clearTimeout(focusTimer);
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
+      restore?.focus?.();
     };
-  }, [verdict, onClose]);
+  }, [open, onClose]);
 
-  if (!verdict) return null;
   return (
-    <div className="fixed inset-0 z-[60] flex justify-end" role="dialog" aria-modal="true" aria-label="Verdict detail">
-      <button type="button" aria-label="Close" className="absolute inset-0 bg-black/70 backdrop-blur-[2px]" onClick={onClose} />
-      <div className="drawer-in relative h-full w-full max-w-[980px] overflow-y-auto border-l border-line-strong bg-canvas">
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-line bg-canvas/95 px-4 py-2 backdrop-blur">
-          <span className="terminal-header truncate">FDR-V · VERDICT DETAIL · {verdict.id}</span>
+    <AnimatePresence>
+      {verdict && (
+        <div className="fixed inset-0 z-[60] flex justify-end" role="dialog" aria-modal="true" aria-label="Verdict detail">
+          <motion.button
+            type="button"
+            aria-label="Close verdict"
+            tabIndex={-1}
+            className="absolute inset-0 cursor-default bg-canvas/60 backdrop-blur-[1px]"
+            onClick={onClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          />
+          <motion.div
+            ref={panelRef}
+            className="relative flex h-full w-[min(760px,100vw)] flex-col border-l border-line-strong bg-panel shadow-[0_24px_60px_-12px_rgba(0,0,0,0.6)]"
+            initial={reduce ? { opacity: 0 } : { x: 32, opacity: 0 }}
+            animate={reduce ? { opacity: 1 } : { x: 0, opacity: 1 }}
+            exit={reduce ? { opacity: 0 } : { x: 32, opacity: 0 }}
+            transition={{ duration: reduce ? 0.12 : 0.32, ease: [0.2, 0, 0, 1] }}
+          >
+            <VerdictDetail key={verdict.id} verdict={verdict} onUpdate={onUpdate} onClose={onClose} />
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+export function VerdictDetail({
+  verdict: v,
+  onUpdate,
+  onClose,
+}: {
+  verdict: Verdict;
+  onUpdate: (v: Verdict) => void;
+  onClose?: () => void;
+}) {
+  return (
+    <>
+      <header className="shrink-0 border-b border-line px-5 pb-4 pt-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <DecisionBadge decision={v.decision} size="lg" />
+            <StatusTag status={v.status} />
+            <Tag>{v.mode === "agent" ? "Agent" : "Fast"}</Tag>
+            <span className="font-mono text-xs tabular-nums text-mute">{ms(v.latency_ms)}</span>
+            <span className="text-xs text-faint">{relTime(v.ts)}</span>
+          </div>
+          {onClose && (
+            <button
+              type="button"
+              data-autofocus
+              onClick={onClose}
+              aria-label="Close verdict detail"
+              className="-mr-1 shrink-0 rounded-md p-1.5 text-mute transition-colors hover:bg-elevated hover:text-ink"
+            >
+              <X size={18} />
+            </button>
+          )}
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-faint">
+          <CopyId id={v.id} />
+          <span>
+            agent <span className="font-mono text-mute">{v.agent_id}</span>
+          </span>
+          {v.scenario_id && <span className="font-mono">{v.scenario_id}</span>}
+        </div>
+        <p className="mt-3 text-[15px] leading-relaxed text-ink">{v.operator_summary}</p>
+      </header>
+
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="divide-y divide-line">
+          <Section title="Trace">
+            <VerdictTrace steps={v.trace} />
+          </Section>
+          <Section title="Why">
+            <Checks checks={v.gate1.checks} forced={v.gate1.forced_block} novel={v.gate1.novel_quarantine} />
+          </Section>
+          <Section title="Gate 2 reviewer">
+            <Gate2 verdict={v} />
+          </Section>
+          <Section title="Chain evidence">
+            <ChainEvidence verdict={v} />
+          </Section>
+          <Section title="Provenance">
+            <Provenance verdict={v} />
+          </Section>
+          <Section title="Threat intel hits">
+            <CtiHits verdict={v} />
+          </Section>
+          <Section title="Recorder row">
+            <EventDoc verdict={v} />
+          </Section>
+        </div>
+      </div>
+
+      {(v.status === "pending_review" || v.review) && (
+        <footer className="shrink-0 border-t border-line bg-panel px-5 py-4">
+          {v.status === "pending_review" && <div className="mb-3 text-[13px] font-medium text-quarantine">Waiting for your decision</div>}
+          <ReviewControls verdict={v} onReviewed={onUpdate} />
+        </footer>
+      )}
+    </>
+  );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="px-5 py-4">
+      <h3 className="mb-3 text-[13px] font-medium text-ink">{title}</h3>
+      {children}
+    </section>
+  );
+}
+
+function CopyId({ id }: { id: string }) {
+  const [done, setDone] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(id);
+      setDone(true);
+      window.setTimeout(() => setDone(false), 1400);
+    } catch {
+      // clipboard blocked
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      className="inline-flex items-center gap-1 rounded px-1 py-0.5 font-mono text-mute transition-colors hover:bg-elevated hover:text-ink"
+      aria-label="Copy verdict id"
+    >
+      {short(id, 8)}
+      {done ? <CheckIcon size={12} className="text-allow" aria-hidden /> : <Copy size={12} aria-hidden />}
+    </button>
+  );
+}
+
+function Checks({ checks, forced, novel }: { checks: Check[]; forced: boolean; novel: boolean }) {
+  const [showPassed, setShowPassed] = useState(false);
+  const failing = useMemo(
+    () => checks.filter((c) => !c.passed).sort((a, b) => SEV_RANK[a.severity] - SEV_RANK[b.severity]),
+    [checks],
+  );
+  const passed = checks.filter((c) => c.passed);
+  return (
+    <div>
+      <p className="mb-3 text-[13px] text-mute">
+        {forced
+          ? "A critical check failed, so Gate 1 blocked this before any model could weigh in."
+          : novel
+            ? "No critical failure, but a check asked for a human before signing."
+            : failing.length === 0
+              ? "Every deterministic check passed."
+              : "Some checks flagged this transaction."}
+      </p>
+      {failing.length > 0 && (
+        <ul className="divide-y divide-line rounded-md border border-line">
+          {failing.map((c, i) => (
+            <CheckRow key={`${c.id}-${i}`} c={c} />
+          ))}
+        </ul>
+      )}
+      {passed.length > 0 && (
+        <div className="mt-2">
           <button
             type="button"
-            onClick={onClose}
-            className="shrink-0 whitespace-nowrap border border-line-strong px-2.5 py-1 font-mono text-[11px] tracking-wider text-mute hover:text-ink"
+            onClick={() => setShowPassed(!showPassed)}
+            aria-expanded={showPassed}
+            className="rounded px-1.5 py-1 text-xs text-faint transition-colors hover:bg-elevated hover:text-ink"
           >
-            ESC ✕
+            {showPassed ? "Hide passed checks" : `Show ${passed.length} passed checks`}
           </button>
+          {showPassed && (
+            <ul className="mt-2 divide-y divide-line rounded-md border border-line">
+              {passed.map((c, i) => (
+                <CheckRow key={`${c.id}-${i}`} c={c} />
+              ))}
+            </ul>
+          )}
         </div>
-        <div className="p-3 md:p-4">
-          <VerdictDetail key={verdict.id} verdict={verdict} onUpdate={onUpdate} />
-        </div>
-      </div>
+      )}
     </div>
   );
 }
 
-export function VerdictDetail({ verdict: v, onUpdate }: { verdict: Verdict; onUpdate: (v: Verdict) => void }) {
-  const failing = v.gate1.checks.filter((c) => !c.passed).length;
+function CheckRow({ c }: { c: Check }) {
   return (
-    <div className="space-y-3">
-      {/* Decision hero */}
-      <section className={`relative overflow-hidden border ${decisionBorder[v.decision]} bg-panel`}>
-        <div className={`absolute inset-y-0 left-0 w-1 ${decisionBg[v.decision]}`} aria-hidden />
-        <div className="terminal-header flex flex-wrap gap-x-3 gap-y-1 border-b border-line px-5 py-1.5">
-          <span className="text-ink">FDR-01</span>
-          <span>VERDICT</span>
-          <span>CH {v.chain.chain_id}</span>
-          <span>{clock(v.ts)}</span>
-          <span>{v.agent_id}</span>
-          {v.scenario_id && <span>{v.scenario_id}</span>}
+    <li className="grid gap-x-3 gap-y-1 px-3 py-2.5 sm:grid-cols-[88px_1fr]">
+      <div className="flex items-start gap-2 sm:block">
+        <span
+          className={`inline-flex h-5 items-center rounded border px-1.5 text-[11px] ${c.passed ? "border-allow/25 text-allow" : SEV_TAG[c.severity]}`}
+        >
+          {c.passed ? "Passed" : c.severity.charAt(0).toUpperCase() + c.severity.slice(1)}
+        </span>
+      </div>
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <span className={`text-[13px] ${c.passed ? "text-mute" : "text-ink"}`}>{c.name}</span>
+          <span className="font-mono text-[11px] text-faint">{c.id}</span>
         </div>
-        <div className="grid gap-4 px-5 py-5 md:grid-cols-[auto_1fr] md:items-start md:gap-8">
-          <div>
-            <div className={`font-mono text-4xl font-semibold tracking-[0.08em] md:text-5xl ${decisionText[v.decision]} ${v.decision === "BLOCK" ? "pulse-block" : ""}`}>
-              {v.decision}
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <StatusTag status={v.status} />
-              <span className="border border-line-strong px-1.5 py-0.5 font-mono text-[10px] tracking-[0.12em] text-mute">
-                {v.mode === "agent" ? "AGENT · STRANDS" : "FAST · DETERMINISTIC"}
-              </span>
-            </div>
-          </div>
-          <div>
-            <p className="text-[15px] leading-relaxed text-ink">{v.operator_summary}</p>
-            <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 font-mono text-[11px] sm:grid-cols-4">
-              <Stat k="latency" val={ms(v.latency_ms)} />
-              <Stat k="gate1 fails" val={`${failing}/${v.gate1.checks.length}`} warn={failing > 0} />
-              <Stat k="hijack" val={`${Math.round(v.gate2.hijack_likelihood * 100)}%`} warn={v.gate2.hijack_likelihood >= 0.5} />
-              <Stat k="engine" val={v.engine} />
-            </dl>
-          </div>
-        </div>
-        {(v.status === "pending_review" || v.review) && (
-          <div className="border-t border-line px-5 py-4">
-            <Label className={v.status === "pending_review" ? "text-quarantine" : ""}>
-              {v.status === "pending_review" ? "operator sign-off required" : "operator review"}
-            </Label>
-            <ReviewControls verdict={v} onReviewed={onUpdate} />
-          </div>
-        )}
-      </section>
-
-      <div className="grid gap-3 lg:grid-cols-[1.25fr_1fr]">
-        <Gate1Table verdict={v} />
-        <Gate2Panel verdict={v} />
+        <div className={`mt-0.5 break-words text-[13px] ${c.passed ? "text-faint" : "text-mute"}`}>{c.detail}</div>
       </div>
-
-      <TraceTimeline verdict={v} />
-
-      <div className="grid gap-3 lg:grid-cols-[1.25fr_1fr]">
-        <ChainEvidence verdict={v} />
-        <CtiHits verdict={v} />
-      </div>
-
-      <EventDoc verdict={v} />
-    </div>
+    </li>
   );
 }
 
-function Stat({ k, val, warn }: { k: string; val: string; warn?: boolean }) {
-  return (
-    <div className="min-w-0">
-      <dt className="uppercase tracking-[0.1em] text-mute">{k}</dt>
-      <dd className={`truncate ${warn ? "text-block" : "text-ink"}`}>{val}</dd>
-    </div>
-  );
-}
-
-function Gate1Table({ verdict: v }: { verdict: Verdict }) {
-  const checks = useMemo(
-    () =>
-      [...v.gate1.checks].sort(
-        (a, b) => Number(a.passed) - Number(b.passed) || SEV_RANK[a.severity] - SEV_RANK[b.severity],
-      ),
-    [v.gate1.checks],
-  );
-  return (
-    <Panel
-      code="FDR-02"
-      label="GATE 1 · DETERMINISTIC"
-      meta={[`${checks.length} CHECKS`, v.gate1.forced_block ? "FORCED BLOCK" : v.gate1.novel_quarantine ? "NOVEL → QUARANTINE" : "NO FORCE"]}
-    >
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[520px] text-left text-xs">
-          <thead className="terminal-header">
-            <tr className="border-b border-line">
-              <th className="px-3 py-1.5 font-normal">result</th>
-              <th className="px-3 py-1.5 font-normal">sev</th>
-              <th className="px-3 py-1.5 font-normal">check</th>
-              <th className="px-3 py-1.5 font-normal">detail</th>
-            </tr>
-          </thead>
-          <tbody>
-            {checks.map((c, i) => (
-              <tr key={`${c.id}-${i}`} className={`border-b border-line last:border-b-0 ${!c.passed ? "bg-block/[0.04]" : ""}`}>
-                <td className={`px-3 py-2 font-mono ${c.passed ? "text-allow/80" : "text-block"}`}>{c.passed ? "PASS" : "FAIL"}</td>
-                <td className={`px-3 py-2 font-mono uppercase ${c.passed ? "text-mute/60" : SEV_CLASS[c.severity]}`}>{c.severity}</td>
-                <td className="px-3 py-2">
-                  <div className={c.passed ? "text-mute" : "text-ink"}>{c.name}</div>
-                  <div className="font-mono text-[10px] text-mute/70">
-                    {c.source} · {c.id}
-                  </div>
-                </td>
-                <td className={`px-3 py-2 ${c.passed ? "text-mute/80" : "text-ink/90"}`}>{c.detail}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Panel>
-  );
-}
-
-function Gate2Panel({ verdict: v }: { verdict: Verdict }) {
+function Gate2({ verdict: v }: { verdict: Verdict }) {
   const g = v.gate2;
   const pct = Math.round(g.hijack_likelihood * 100);
-  const color = pct >= 70 ? "bg-block" : pct >= 35 ? "bg-quarantine" : "bg-allow";
-  const text = pct >= 70 ? "text-block" : pct >= 35 ? "text-quarantine" : "text-allow";
+  const tone = pct >= 70 ? "text-block" : pct >= 35 ? "text-quarantine" : "text-allow";
+  const bar = pct >= 70 ? "bg-block" : pct >= 35 ? "bg-quarantine" : "bg-allow";
   return (
-    <Panel
-      code="FDR-03"
-      label="GATE 2 · ADVERSARIAL REVIEW"
-      meta={[g.mode.toUpperCase()]}
-      right={
-        <span className={`border px-1.5 py-0.5 font-mono text-[10px] tracking-wider ${g.passed ? "border-allow/50 text-allow" : "border-block/60 text-block"}`}>
-          {g.passed ? "PASSED" : "FAILED"}
-        </span>
-      }
-      bodyClassName="space-y-4 p-4"
-    >
-      <div>
-        <div className="flex items-end justify-between">
-          <span className="terminal-header">hijack likelihood</span>
-          <span className={`font-mono text-2xl ${text}`}>{pct}%</span>
-        </div>
-        <div className="relative mt-2 h-2.5 border border-line bg-canvas">
-          <div className={`h-full ${color}`} style={{ width: `${pct}%` }} />
-          {[35, 70].map((t) => (
-            <div key={t} className="absolute inset-y-[-3px] w-px bg-line-strong" style={{ left: `${t}%` }} aria-hidden />
-          ))}
-        </div>
-        <div className="mt-1 flex justify-between font-mono text-[9px] text-mute/70">
-          <span>0</span>
-          <span>REVIEW 35</span>
-          <span>BLOCK 70</span>
-          <span>100</span>
-        </div>
-      </div>
-      <div className="flex flex-wrap items-center gap-2 font-mono text-[11px]">
-        <span className="terminal-header">class</span>
-        <span className={`border px-1.5 py-0.5 ${g.attack_class === "none" ? "border-line-strong text-mute" : "border-block/60 text-block"}`}>
-          {g.attack_class}
-        </span>
-        <span className="terminal-header ml-2">model</span>
-        <span className="truncate text-ink">{g.model}</span>
-      </div>
-      {g.reasons.length > 0 && (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
         <div>
-          <Label>reasons</Label>
-          <ul className="space-y-1.5 text-sm text-ink/90">
-            {g.reasons.map((r, i) => (
-              <li key={i} className="border-l border-line-strong pl-3">
-                {r}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {g.evidence.length > 0 && (
-        <div>
-          <Label>evidence · quoted from provenance</Label>
-          <div className="space-y-1.5">
-            {g.evidence.map((e, i) => (
-              <blockquote key={i} className="border-l-2 border-block/70 bg-block/[0.05] px-3 py-1.5 font-mono text-[11px] break-words text-[#fca5a5]">
-                {e}
-              </blockquote>
-            ))}
+          <div className="text-xs text-faint">Hijack likelihood</div>
+          <div className={`mt-0.5 font-mono text-4xl tabular-nums tracking-tight ${tone}`}>{pct}%</div>
+          <div className="mt-1.5 w-40" aria-hidden>
+            <div className={`h-1 rounded-full ${bar}`} style={{ width: `${Math.max(2, pct)}%` }} />
           </div>
         </div>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[13px]">
+          <dt className="text-faint">Attack class</dt>
+          <dd>
+            <span
+              className={`inline-flex h-5 items-center rounded border px-1.5 font-mono text-[11px] ${g.attack_class === "none" ? "border-line-strong text-mute" : "border-block/35 bg-block/10 text-block"}`}
+            >
+              {g.attack_class}
+            </span>
+          </dd>
+          <dt className="text-faint">Reviewer</dt>
+          <dd className="min-w-0 truncate font-mono text-xs text-mute">
+            {g.mode === "llm" ? g.model : g.mode === "heuristic" ? "heuristic (no model configured)" : "skipped"}
+          </dd>
+          <dt className="text-faint">Result</dt>
+          <dd className={g.passed ? "text-allow" : "text-block"}>{g.passed ? "Consistent with intent" : "Flagged"}</dd>
+        </dl>
+      </div>
+      {g.reasons.length > 0 && (
+        <ul className="list-disc space-y-1 pl-5 text-[13px] text-mute marker:text-faint">
+          {g.reasons.map((r, i) => (
+            <li key={i}>{r}</li>
+          ))}
+        </ul>
       )}
-      <p className="font-mono text-[10px] text-mute/80">Reviewer sees only proposed_tx + provenance, never the trading agent&apos;s chat.</p>
-    </Panel>
-  );
-}
-
-const KIND_GLYPH: Record<TraceStep["kind"], string> = { system: "◇", gate: "▣", tool: "⚙", model: "◈" };
-const KIND_CLASS: Record<TraceStep["kind"], string> = {
-  system: "text-mute border-line-strong",
-  gate: "text-ink border-ink/60",
-  tool: "text-[#c9c9c9] border-line-strong",
-  model: "text-quarantine border-quarantine/60",
-};
-
-function TraceTimeline({ verdict: v }: { verdict: Verdict }) {
-  const steps = v.trace;
-  const firstOpen = !seenTraces.has(v.id);
-  const [revealed, setRevealed] = useState(firstOpen ? 0 : steps.length);
-  const [open, setOpen] = useState<Set<number>>(() => new Set());
-  const total = Math.max(1, steps.reduce((a, s) => a + s.duration_ms, 0));
-  const t0 = steps.length ? new Date(steps[0].started_at).getTime() : 0;
-
-  useEffect(() => {
-    seenTraces.add(v.id);
-    if (revealed >= steps.length) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) {
-      setRevealed(steps.length);
-      return;
-    }
-    const id = window.setInterval(() => {
-      setRevealed((n) => {
-        if (n + 1 >= steps.length) window.clearInterval(id);
-        return Math.min(steps.length, n + 1);
-      });
-    }, 150);
-    return () => window.clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [v.id]);
-
-  const toggle = (i: number) =>
-    setOpen((s) => {
-      const n = new Set(s);
-      if (n.has(i)) n.delete(i);
-      else n.add(i);
-      return n;
-    });
-
-  return (
-    <Panel
-      code="FDR-04"
-      label="TRACE"
-      meta={[`CH ${v.chain.chain_id}`, clock(v.ts), `SEQ ${String(steps.length).padStart(4, "0")}`, ms(total)]}
-      right={
-        revealed < steps.length ? (
-          <span className="font-mono text-[10px] tracking-wider text-quarantine">
-            REPLAYING<span className="blink">_</span>
-          </span>
-        ) : (
-          <button
-            type="button"
-            className="font-mono text-[10px] tracking-wider text-mute hover:text-ink"
-            onClick={() => setOpen(open.size ? new Set() : new Set(steps.map((s) => s.i)))}
-          >
-            {open.size ? "COLLAPSE ALL" : "EXPAND ALL"}
-          </button>
-        )
-      }
-    >
-      {steps.length === 0 ? (
-        <p className="p-4 text-sm text-mute">No trace steps recorded for this verdict.</p>
-      ) : (
-        <ol className="relative">
-          {steps.slice(0, revealed).map((s) => {
-            const offset = ((new Date(s.started_at).getTime() - t0) / total) * 100;
-            const width = Math.max(0.6, (s.duration_ms / total) * 100);
-            const isOpen = open.has(s.i);
-            return (
-              <li key={s.i} className="trace-in border-b border-line last:border-b-0">
-                <button
-                  type="button"
-                  onClick={() => toggle(s.i)}
-                  aria-expanded={isOpen}
-                  className="grid w-full grid-cols-[28px_1fr_auto] items-center gap-x-3 px-3 py-2 text-left hover:bg-elevated/60 sm:grid-cols-[28px_minmax(160px,1fr)_minmax(120px,1.2fr)_76px]"
-                >
-                  <span className={`flex h-6 w-6 items-center justify-center border font-mono text-xs ${KIND_CLASS[s.kind]}`} title={s.kind}>
-                    {KIND_GLYPH[s.kind]}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate font-mono text-xs text-ink">
-                      <span className="text-mute/60">{String(s.i).padStart(2, "0")} </span>
-                      {s.name}
-                    </span>
-                    <span className="terminal-header !text-[9px]">
-                      {s.kind} · {clock(s.started_at)} {s.status === "error" && <span className="text-block">· ERROR</span>}
-                    </span>
-                  </span>
-                  <span className="relative hidden h-1.5 bg-line/60 sm:block" aria-hidden>
-                    <span
-                      className={`absolute inset-y-0 ${s.status === "error" ? "bg-block" : s.kind === "model" ? "bg-quarantine/80" : "bg-ink/70"}`}
-                      style={{ left: `${Math.min(offset, 99.4)}%`, width: `${width}%` }}
-                    />
-                  </span>
-                  <span className="text-right font-mono text-[11px] text-mute">
-                    {ms(s.duration_ms)} <span className="text-mute/60">{isOpen ? "▾" : "▸"}</span>
-                  </span>
-                </button>
-                {isOpen && (
-                  <div className="grid gap-2 px-3 pb-3 md:grid-cols-2">
-                    <div>
-                      <Label className="!mb-1">input</Label>
-                      <JsonBlock value={s.input ?? null} className="max-h-64" />
-                    </div>
-                    <div>
-                      <Label className="!mb-1">output</Label>
-                      <JsonBlock value={s.output ?? null} className="max-h-64" />
-                    </div>
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ol>
+      {g.evidence.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-xs text-faint">Quoted from what the agent read</div>
+          {g.evidence.map((e, i) => (
+            <blockquote key={i} className="break-words border-l-2 border-line-strong pl-3 font-mono text-[12px] text-ink/90">
+              {e}
+            </blockquote>
+          ))}
+        </div>
       )}
-    </Panel>
+      <p className="text-xs text-faint">The reviewer only sees the intent, the transaction and the fenced sources. It never sees the agent&apos;s conversation.</p>
+    </div>
   );
 }
 
 function ChainEvidence({ verdict: v }: { verdict: Verdict }) {
   const c = v.chain;
   const tx = v.proposed_tx;
-  const toUrl = addressUrl(tx.chain_id, tx.to);
   const gp = c.goplus;
+  const flags = [...(gp?.token?.flags ?? []), ...(gp?.address?.flags ?? [])];
   return (
-    <Panel code="FDR-05" label="CHAIN EVIDENCE" meta={[networkLabel(c.chain_id), c.network]} bodyClassName="space-y-4 p-4">
-      <div className="grid gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
-        <KV k="to">
-          <ExtLink href={toUrl} className="break-all text-ink">
-            {tx.to}
+    <div className="space-y-4">
+      <dl className="grid gap-x-6 gap-y-3 text-[13px] sm:grid-cols-2">
+        <KV k={`To, ${networkLabel(tx.chain_id)}`}>
+          <ExtLink href={addressUrl(tx.chain_id, tx.to)} className="break-all text-ink">
+            {short(tx.to, 10)}
           </ExtLink>
         </KV>
-        <KV k="value">{formatEth(tx.value_wei)}</KV>
-        <KV k="method">{tx.method ?? "-"}</KV>
-        <KV k="amount">{tx.amount_human ?? "-"}</KV>
+        <KV k="Value">{formatEth(tx.value_wei)}</KV>
+        <KV k="Method">{tx.method ? `${tx.method}()` : "-"}</KV>
+        <KV k="Amount">{tx.amount_human ?? "-"}</KV>
         {tx.token_address && (
-          <KV k={`token${tx.token_symbol ? " · " + tx.token_symbol : ""}`}>
+          <KV k={`Token${tx.token_symbol ? `, ${tx.token_symbol}` : ""}`}>
             <ExtLink href={addressUrl(tx.chain_id, tx.token_address)} className="text-ink">
               {short(tx.token_address)}
             </ExtLink>
           </KV>
         )}
         {tx.spender && (
-          <KV k="spender">
-            <ExtLink href={addressUrl(tx.chain_id, tx.spender)} className="text-block">
+          <KV k="Spender">
+            <ExtLink href={addressUrl(tx.chain_id, tx.spender)} className="text-ink">
               {short(tx.spender)}
             </ExtLink>
           </KV>
         )}
-        <KV k="to is contract">{c.to_is_contract === null ? "unknown" : c.to_is_contract ? "yes" : "no (EOA)"}</KV>
-        <KV k="code size">{c.code_size === null ? "-" : `${c.code_size.toLocaleString()} bytes`}</KV>
-      </div>
+        <KV k="Target">
+          {c.to_is_contract === null
+            ? "Unknown"
+            : c.to_is_contract
+              ? `Contract, ${c.code_size === null ? "?" : c.code_size.toLocaleString()} bytes`
+              : "Wallet address, no code"}
+        </KV>
+        <KV k="Simulation">
+          {c.simulation ? (
+            <span className={c.simulation.ok ? "text-allow" : "text-block"}>
+              {c.simulation.ok ? "No revert" : `Reverts: ${c.simulation.revert_reason ?? "unknown reason"}`}
+            </span>
+          ) : (
+            <span className="text-faint">Not run</span>
+          )}
+        </KV>
+      </dl>
 
       {c.decoded_call && (
         <div>
-          <Label>decoded call</Label>
-          <div className="border border-line bg-canvas p-3 font-mono text-[11px]">
-            <div className="text-ink">
-              <span className="text-mute">{c.decoded_call.selector}</span> {c.decoded_call.signature}
+          <div className="mb-1.5 text-xs text-faint">Decoded call</div>
+          <div className="overflow-x-auto rounded-md border border-line bg-canvas">
+            <div className="border-b border-line px-3 py-2 font-mono text-[12px] text-ink">
+              <span className="text-faint">{c.decoded_call.selector}</span> {c.decoded_call.signature}
             </div>
-            {Object.entries(c.decoded_call.args).map(([k, val]) => (
-              <div key={k} className="mt-1 break-all text-mute">
-                {k} = <span className="text-[#c9c9c9]">{val}</span>
-              </div>
-            ))}
+            <table className="w-full text-left font-mono text-[12px]">
+              <tbody>
+                {Object.entries(c.decoded_call.args).map(([k, val]) => (
+                  <tr key={k} className="border-b border-line last:border-b-0">
+                    <td className="w-32 px-3 py-1.5 align-top text-faint">{k}</td>
+                    <td className="break-all px-3 py-1.5 text-mute">{val}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label>simulation</Label>
-          {c.simulation ? (
-            <div className={`font-mono text-xs ${c.simulation.ok ? "text-allow" : "text-block"}`}>
-              {c.simulation.ok ? "OK · no revert" : `REVERT · ${c.simulation.revert_reason ?? "unknown"}`}
+          <div className="mb-1.5 text-xs text-faint">GoPlus</div>
+          {gp ? (
+            <div className="space-y-1 text-[13px]">
+              {gp.token && (
+                <div className={gp.token.is_honeypot ? "text-block" : "text-mute"}>
+                  Token {gp.token.is_honeypot ? "is a honeypot" : "not a honeypot"}, buy tax{" "}
+                  <span className="font-mono">{gp.token.buy_tax}</span>, sell tax <span className="font-mono">{gp.token.sell_tax}</span>
+                </div>
+              )}
+              {gp.address && (
+                <div className={gp.address.malicious ? "text-block" : "text-mute"}>
+                  Address {gp.address.malicious ? "flagged malicious" : "not flagged"}
+                </div>
+              )}
+              {flags.length > 0 && (
+                <div className="flex flex-wrap gap-1 pt-1">
+                  {flags.map((f) => (
+                    <span key={f} className="rounded border border-block/30 px-1.5 py-px font-mono text-[11px] text-block">
+                      {f}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
-            <div className="font-mono text-xs text-mute">not run</div>
+            <div className="text-[13px] text-faint">No data</div>
           )}
         </div>
         <div>
-          <Label>goplus</Label>
-          {gp ? (
-            <div className="space-y-1.5 font-mono text-[11px]">
-              {gp.token && (
-                <div className={gp.token.is_honeypot ? "text-block" : "text-mute"}>
-                  token · honeypot={String(gp.token.is_honeypot)} · buy {gp.token.buy_tax} · sell {gp.token.sell_tax}
-                </div>
-              )}
-              {gp.address && <div className={gp.address.malicious ? "text-block" : "text-mute"}>address · malicious={String(gp.address.malicious)}</div>}
-              <div className="flex flex-wrap gap-1">
-                {[...(gp.token?.flags ?? []), ...(gp.address?.flags ?? [])].map((f) => (
-                  <span key={f} className="border border-block/50 px-1 text-[10px] text-block">
-                    {f}
-                  </span>
-                ))}
+          <div className="mb-1.5 text-xs text-faint">Reputation registry, Base Sepolia</div>
+          {c.onchain_ioc ? (
+            <div className="rounded-md border border-block/30 bg-block/[0.05] px-3 py-2.5 text-[13px]">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="font-mono text-block">IOC #{c.onchain_ioc.ioc_id}</span>
+                <span className="text-ink">{c.onchain_ioc.category.toLowerCase()}</span>
+                <span className="text-faint">
+                  {c.onchain_ioc.severity}, <span className="font-mono">{c.onchain_ioc.confidence}%</span> confidence
+                </span>
+              </div>
+              <div className="mt-1 text-mute">{c.onchain_ioc.uri}</div>
+              <div className="mt-1.5 flex flex-wrap gap-x-3 text-xs text-faint">
+                <span>
+                  target{" "}
+                  <ExtLink href={addressUrl(tx.chain_id, c.onchain_ioc.target)} className="text-mute">
+                    {short(c.onchain_ioc.target)}
+                  </ExtLink>
+                </span>
+                <span>
+                  publisher{" "}
+                  <ExtLink href={addressUrl(84532, c.onchain_ioc.publisher)} className="text-mute">
+                    {short(c.onchain_ioc.publisher)}
+                  </ExtLink>
+                </span>
               </div>
             </div>
           ) : (
-            <div className="font-mono text-xs text-mute">no data</div>
+            <div className="text-[13px] text-faint">No registry match</div>
           )}
         </div>
-      </div>
-
-      <div>
-        <Label>on-chain ioc · reputation registry</Label>
-        {c.onchain_ioc ? (
-          <div className="border border-block/50 bg-block/[0.04] p-3 font-mono text-[11px]">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-block">IOC #{c.onchain_ioc.ioc_id}</span>
-              <span className="uppercase text-ink">{c.onchain_ioc.category}</span>
-              <span className="uppercase text-block">{c.onchain_ioc.severity}</span>
-              <span className="text-mute">{c.onchain_ioc.confidence}% confidence</span>
-            </div>
-            <div className="mt-1.5 break-all text-mute">
-              target{" "}
-              <ExtLink href={addressUrl(tx.chain_id, c.onchain_ioc.target)} className="text-ink">
-                {short(c.onchain_ioc.target)}
-              </ExtLink>{" "}
-              · publisher{" "}
-              <ExtLink href={addressUrl(84532, c.onchain_ioc.publisher)} className="text-ink">
-                {short(c.onchain_ioc.publisher)}
-              </ExtLink>
-            </div>
-            <div className="mt-1 break-all text-mute/80">{c.onchain_ioc.uri}</div>
-          </div>
-        ) : (
-          <div className="font-mono text-xs text-mute">no registry match</div>
-        )}
       </div>
 
       {c.errors.length > 0 && (
-        <div className="font-mono text-[11px] text-quarantine">
+        <ul className="space-y-0.5 text-xs text-quarantine">
           {c.errors.map((e, i) => (
-            <div key={i}>WARN · {e}</div>
+            <li key={i}>Lookup warning: {e}</li>
           ))}
-        </div>
+        </ul>
       )}
-    </Panel>
+    </div>
   );
 }
 
-function KV({ k, children }: { k: string; children: React.ReactNode }) {
+function KV({ k, children }: { k: string; children: ReactNode }) {
   return (
     <div className="min-w-0">
-      <div className="terminal-header !text-[10px]">{k}</div>
-      <div className="mt-0.5 truncate font-mono text-ink/90">{children}</div>
+      <dt className="text-xs text-faint">{k}</dt>
+      <dd className="mt-0.5 truncate font-mono text-[12.5px] text-mute">{children}</dd>
+    </div>
+  );
+}
+
+function suspiciousTerms(v: Verdict): string[] {
+  const terms = new Set<string>();
+  const add = (s: string | undefined | null) => {
+    const t = (s ?? "").trim();
+    if (t.length >= 4 && t.length <= 160) terms.add(t);
+  };
+  for (const c of v.gate1.checks) {
+    if (c.passed) continue;
+    for (const m of c.detail.matchAll(/["“']([^"”']{4,120})["”']/g)) add(m[1]);
+    for (const m of c.detail.matchAll(/0x[a-fA-F0-9]{40}/g)) add(m[0]);
+  }
+  for (const h of v.cti_hits) add(h.address);
+  for (const e of v.gate2.evidence) add(e.replace(/^["“]|["”]$/g, ""));
+  return [...terms].sort((a, b) => b.length - a.length);
+}
+
+function Highlighted({ text, terms }: { text: string; terms: string[] }) {
+  const parts = useMemo(() => {
+    if (terms.length === 0) return [{ s: text, hit: false }];
+    const lower = text.toLowerCase();
+    const ranges: [number, number][] = [];
+    for (const t of terms) {
+      const tl = t.toLowerCase();
+      let from = 0;
+      while (from < lower.length) {
+        const at = lower.indexOf(tl, from);
+        if (at < 0) break;
+        if (!ranges.some(([a, b]) => at < b && at + tl.length > a)) ranges.push([at, at + tl.length]);
+        from = at + tl.length;
+      }
+    }
+    ranges.sort((a, b) => a[0] - b[0]);
+    const out: { s: string; hit: boolean }[] = [];
+    let cur = 0;
+    for (const [a, b] of ranges) {
+      if (a > cur) out.push({ s: text.slice(cur, a), hit: false });
+      out.push({ s: text.slice(a, b), hit: true });
+      cur = b;
+    }
+    if (cur < text.length) out.push({ s: text.slice(cur), hit: false });
+    return out;
+  }, [text, terms]);
+  return (
+    <>
+      {parts.map((p, i) =>
+        p.hit ? (
+          <mark key={i} className="rounded-sm bg-block/15 px-0.5 text-block">
+            {p.s}
+          </mark>
+        ) : (
+          <span key={i}>{p.s}</span>
+        ),
+      )}
+    </>
+  );
+}
+
+type Source = { type?: string; content?: string; url?: string };
+type Prov = { user_intent?: string; sources?: Source[] };
+
+let scenarioCache: Promise<Record<string, Prov>> | null = null;
+
+function scenarioProvenance(): Promise<Record<string, Prov>> {
+  scenarioCache ??= rpc<{ attacks: Scenario[] }>("scenarios").then((res) => {
+    if (hasError(res)) {
+      scenarioCache = null;
+      return {};
+    }
+    return Object.fromEntries(res.attacks.map((s) => [s.id, s.request.provenance]));
+  });
+  return scenarioCache;
+}
+
+// Verdicts don't store the raw sources, so fall back to the trace intent and, for Attack Lab runs, the scenario request.
+function useProvenance(v: Verdict): Prov {
+  const direct = (v as Verdict & { provenance?: Prov; request?: { provenance?: Prov } }).provenance ?? (v as { request?: { provenance?: Prov } }).request?.provenance;
+  const traceIn = v.trace.find((s) => s.name === "receive_request" || s.name === "request.received")?.input as
+    | { intent?: string; provenance?: Prov }
+    | undefined;
+  const [fromScenario, setFromScenario] = useState<Prov | null>(null);
+  useEffect(() => {
+    if (direct?.sources?.length || !v.scenario_id) return;
+    let live = true;
+    scenarioProvenance().then((map) => live && setFromScenario(map[v.scenario_id as string] ?? null));
+    return () => {
+      live = false;
+    };
+  }, [direct, v.scenario_id]);
+  return {
+    user_intent: direct?.user_intent ?? traceIn?.provenance?.user_intent ?? traceIn?.intent ?? fromScenario?.user_intent,
+    sources: direct?.sources ?? traceIn?.provenance?.sources ?? fromScenario?.sources ?? [],
+  };
+}
+
+function Provenance({ verdict: v }: { verdict: Verdict }) {
+  const terms = useMemo(() => suspiciousTerms(v), [v]);
+  const prov = useProvenance(v);
+  const userIntent = prov.user_intent || null;
+  const list = prov.sources ?? [];
+  return (
+    <div className="space-y-3">
+      <div>
+        <div className="text-xs text-faint">What the human asked for</div>
+        <p className="mt-0.5 text-[14px] text-ink">{userIntent ? `“${userIntent}”` : <span className="text-faint">Not recorded</span>}</p>
+      </div>
+      {list.length === 0 ? (
+        <p className="text-[13px] text-faint">No provenance sources were attached to this verdict.</p>
+      ) : (
+        list.map((s, i) => (
+          <div key={i} className="min-w-0">
+            <div className="mb-1 flex flex-wrap items-center gap-2 text-xs text-faint">
+              <Tag>{s.type ?? "source"}</Tag>
+              {s.url && <span className="truncate font-mono">{s.url}</span>}
+            </div>
+            <pre className="whitespace-pre-wrap break-words rounded-md border border-line bg-canvas p-3 font-mono text-[12px] leading-5 text-mute">
+              <Highlighted text={s.content ?? ""} terms={terms} />
+            </pre>
+          </div>
+        ))
+      )}
+      {terms.length > 0 && list.length > 0 && <p className="text-xs text-faint">Highlighted text matched a failing check, a threat intel address or the reviewer&apos;s evidence.</p>}
     </div>
   );
 }
 
 function CtiHits({ verdict: v }: { verdict: Verdict }) {
+  if (v.cti_hits.length === 0) return <p className="text-[13px] text-faint">No threat intel indicators matched this transaction.</p>;
   return (
-    <Panel code="FDR-06" label="CTI HITS" meta={[`${v.cti_hits.length} MATCH${v.cti_hits.length === 1 ? "" : "ES"}`]}>
-      {v.cti_hits.length === 0 ? (
-        <p className="p-4 font-mono text-xs text-mute">No threat-intel indicators matched this transaction.</p>
-      ) : (
-        <ul>
+    <div className="overflow-x-auto rounded-md border border-line">
+      <table className="w-full min-w-[520px] text-left text-[13px]">
+        <thead>
+          <tr className="border-b border-line text-xs text-faint">
+            <th className="px-3 py-2 font-normal">Indicator</th>
+            <th className="px-3 py-2 font-normal">Severity</th>
+            <th className="px-3 py-2 font-normal">Source</th>
+            <th className="px-3 py-2 font-normal">Match</th>
+          </tr>
+        </thead>
+        <tbody>
           {v.cti_hits.map((h, i) => (
-            <li key={`${h.ioc_id}-${i}`} className="border-b border-line px-4 py-2.5 last:border-b-0">
-              <div className="flex flex-wrap items-center gap-2 font-mono text-[11px]">
-                <span className="text-ink">{h.ioc_id}</span>
-                <span className={`uppercase ${h.severity === "critical" ? "text-block" : h.severity === "high" ? "text-[#f87171]" : "text-quarantine"}`}>
-                  {h.severity}
-                </span>
-                <span className="border border-line-strong px-1 text-[10px] uppercase text-mute">{h.source}</span>
-              </div>
-              <div className="mt-1 text-sm text-ink/90">{h.title}</div>
-              <div className="mt-0.5 break-all font-mono text-[10px] text-mute">
-                {h.category}
-                {h.address && (
-                  <>
-                    {" · "}
-                    <ExtLink href={addressUrl(v.proposed_tx.chain_id, h.address)}>{short(h.address)}</ExtLink>
-                  </>
-                )}
-                {h.pattern && <> · /{h.pattern}/</>}
-              </div>
-            </li>
+            <tr key={`${h.ioc_id}-${i}`} className="border-b border-line last:border-b-0 align-top">
+              <td className="px-3 py-2">
+                <div className="text-ink">{h.title}</div>
+                <div className="font-mono text-[11px] text-faint">
+                  {h.ioc_id}, {h.category}
+                </div>
+              </td>
+              <td className={`px-3 py-2 ${h.severity === "critical" || h.severity === "high" ? "text-block" : "text-quarantine"}`}>{h.severity}</td>
+              <td className="px-3 py-2 text-mute">{h.source}</td>
+              <td className="px-3 py-2 font-mono text-[12px] text-mute">
+                {h.address ? <ExtLink href={addressUrl(v.proposed_tx.chain_id, h.address)}>{short(h.address)}</ExtLink> : h.pattern ? `/${h.pattern}/` : "-"}
+              </td>
+            </tr>
           ))}
-        </ul>
-      )}
-    </Panel>
+        </tbody>
+      </table>
+    </div>
   );
 }
 
 function EventDoc({ verdict: v }: { verdict: Verdict }) {
   const [open, setOpen] = useState(false);
   return (
-    <Panel
-      code="FDR-07"
-      label="CLICKHOUSE ROW"
-      meta={["agentshield.verdicts", `${Object.keys(v.event_doc).length} COLS`]}
-      right={
-        <button type="button" onClick={() => setOpen(!open)} className="font-mono text-[10px] tracking-wider text-mute hover:text-ink">
-          {open ? "HIDE ▾" : "SHOW ▸"}
-        </button>
-      }
-    >
-      {open && <JsonBlock value={v.event_doc} className="m-3 max-h-96" />}
-    </Panel>
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        className="rounded px-1.5 py-1 text-xs text-faint transition-colors hover:bg-elevated hover:text-ink"
+      >
+        {open ? "Hide" : "Show"} the ClickHouse row ({Object.keys(v.event_doc).length} columns)
+      </button>
+      {open && <JsonBlock value={v.event_doc} className="mt-2 max-h-96" />}
+    </div>
   );
 }
-

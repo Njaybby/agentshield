@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { DecisionBadge } from "@/components/DecisionBadge";
+import { Tag } from "@/components/ui/States";
 import { Panel } from "./Panel";
+import { CodeBlock, LangSwitch, type Lang } from "./IntegrateCode";
+
+const DEFAULT_BASE = "https://agentshield-lyart.vercel.app";
 
 // Minimal real request: the A5 clean Uniswap swap on Base mainnet.
 const A5_REQUEST = {
@@ -20,13 +24,6 @@ const A5_REQUEST = {
   },
 };
 
-function curlSnippet(base: string) {
-  const body = JSON.stringify({ action: "shield", mode: "fast", request: A5_REQUEST }, null, 2);
-  return `curl -s -X POST ${base}/api/rpc \\
-  -H 'Content-Type: application/json' \\
-  -d '${body}'`;
-}
-
 const CURL_RESPONSE = `{
   "id": "fdc82398-3975-400d-aad3-da36c7ac0f72",
   "decision": "ALLOW",
@@ -35,150 +32,206 @@ const CURL_RESPONSE = `{
   ...
 }`;
 
-function pythonSnippet(base: string) {
-  return `import time, requests
+const INSTALL: Record<Lang, string> = {
+  python: "pip install ./sdk/python",
+  typescript: "npm install ./sdk/typescript",
+};
 
-SHIELD = "${base}/api/rpc"
+function quickstart(lang: Lang, base: string) {
+  if (lang === "python") {
+    return `from agentshield import Shield, Blocked, ShieldUnavailable, request_from_tx
 
-class ShieldBlocked(Exception):
-    pass
+shield = Shield("${base}", mode="fast", fail_closed=True)
 
-def _rpc(payload):
-    r = requests.post(SHIELD, json=payload, timeout=90)  # agent mode takes 10-40s
-    r.raise_for_status()
-    body = r.json()
-    if body.get("error"):
-        raise ShieldBlocked(f"shield unavailable, failing closed: {body['error']}")
-    return body
+tx = {"to": router, "value": 0, "data": calldata, "chainId": 8453}
+req = request_from_tx(
+    tx,
+    intent="Approve the DEX router so I can swap 250 USDC",
+    sources=[tool_output],  # what the agent read
+    agent_id="desk-rebalancer-02",
+    method="approve",
+)
 
-def guard_then_sign(request, sign_fn, poll_every=5, max_wait=1800):
-    v = _rpc({"action": "shield", "mode": "agent", "request": request})
-    deadline = time.time() + max_wait
-    while v["status"] == "pending_review":            # QUARANTINE: operator decides
-        if time.time() > deadline:
-            raise ShieldBlocked(f"{v['id']}: no operator decision in time")
-        time.sleep(poll_every)
-        v = _rpc({"action": "telemetry", "view": "verdict", "id": v["id"]})
-    if v["status"] == "approved" or (v["decision"] == "ALLOW" and v["status"] == "final"):
-        return sign_fn(request["proposed_tx"])
-    raise ShieldBlocked(f"{v['decision']}/{v['status']} {v['id']}: {v['operator_summary']}")`;
+try:
+    tx_hash = shield.guard(req, lambda _: w3.eth.send_transaction(tx))
+except Blocked as e:  # BLOCK, or an operator denied it
+    log.warning("not signed: %s", e.verdict.operator_summary)
+except ShieldUnavailable:
+    log.error("shield unreachable, not signed")`;
+  }
+  return `import { Shield, BlockedError, ShieldUnavailableError, fromViemTx } from "@agentshield/sdk";
+
+const shield = new Shield({ baseUrl: "${base}", mode: "fast", failClosed: true });
+
+const tx = { to: router, value: 0n, data: calldata, chainId: 8453 };
+const request = fromViemTx(tx, {
+  intent: "Approve the DEX router so I can swap 250 USDC",
+  sources: [toolOutput], // what the agent read
+  agentId: "desk-rebalancer-02",
+  method: "approve",
+});
+
+try {
+  const hash = await shield.guard(request, () => walletClient.sendTransaction(tx));
+} catch (err) {
+  if (err instanceof BlockedError) console.warn("not signed:", err.verdict.operator_summary);
+  else if (err instanceof ShieldUnavailableError) console.error("shield unreachable, not signed");
+  else throw err;
+}`;
+}
+
+function curlSnippet(base: string) {
+  const body = JSON.stringify({ action: "shield", mode: "fast", request: A5_REQUEST }, null, 2);
+  return `curl -s -X POST ${base}/api/rpc \\
+  -H 'Content-Type: application/json' \\
+  -d '${body}'`;
 }
 
 function x402Snippet(base: string) {
-  return `// npm i x402-fetch viem
-import { wrapFetchWithPayment, decodeXPaymentResponse } from "x402-fetch";
+  return `import { Shield } from "@agentshield/sdk";
+import { wrapFetchWithPayment } from "x402-fetch";
 import { privateKeyToAccount } from "viem/accounts";
+import type { Hex } from "viem";
 
 // Burner wallet holding free testnet USDC on Base Sepolia
-const account = privateKeyToAccount(process.env.AGENT_PRIVATE_KEY);
-const payFetch = wrapFetchWithPayment(fetch, account);
+const account = privateKeyToAccount(process.env.AGENT_PRIVATE_KEY as Hex);
+const payingFetch = wrapFetchWithPayment(fetch, account, 20_000n); // pay at most $0.02 per call
 
-// ${base}/api/v1/shield        $0.001  fast (deterministic gates)
-// ${base}/api/v1/shield/agent  $0.01   agent mode (Strands + LLM review)
-const res = await payFetch("${base}/api/v1/shield", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify(request), // a bare ShieldRequest
-});
-
-const verdict = await res.json();
-const receipt = decodeXPaymentResponse(res.headers.get("x-payment-response"));
-console.log(verdict.decision, verdict.id, "settled in tx", receipt.transaction);`;
+const shield = new Shield({ baseUrl: "${base}", mode: "fast", paid: true, fetch: payingFetch });
+const verdict = await shield.check(request); // settles $0.001 in USDC, then returns the verdict`;
 }
 
-function CodePanel({ code, label, meta, snippet }: { code: string; label: string; meta: string[]; snippet: string }) {
-  const [copied, setCopied] = useState<"ok" | "fail" | null>(null);
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(snippet);
-      setCopied("ok");
-    } catch {
-      setCopied("fail");
-    }
-    window.setTimeout(() => setCopied(null), 1600);
-  };
-  return (
-    <Panel
-      code={code}
-      label={label}
-      meta={meta}
-      className="min-w-0"
-      right={
-        <button
-          type="button"
-          onClick={copy}
-          className={`border px-2 py-0.5 font-mono text-[10px] tracking-wider ${
-            copied === "ok" ? "border-allow/60 text-allow" : copied === "fail" ? "border-block/60 text-block" : "border-line-strong text-mute hover:text-ink"
-          }`}
-        >
-          {copied === "ok" ? "COPIED" : copied === "fail" ? "COPY FAILED" : "COPY"}
-        </button>
-      }
-    >
-      <pre className="overflow-x-auto bg-canvas p-4 font-mono text-[12px] leading-5 text-[#d4d4d4]">{snippet}</pre>
-    </Panel>
-  );
+const ERRORS: Record<Lang, { blocked: string; denied: string; timeout: string; down: string }> = {
+  python: { blocked: "Blocked", denied: "Denied", timeout: "ReviewTimeout", down: "ShieldUnavailable" },
+  typescript: { blocked: "BlockedError", denied: "DeniedError", timeout: "ReviewTimeoutError", down: "ShieldUnavailableError" },
+};
+
+function Mono({ children }: { children: ReactNode }) {
+  return <code className="font-mono text-[12.5px] text-ink">{children}</code>;
 }
 
 export function Integrate() {
-  const [base] = useState(() => (typeof window !== "undefined" ? window.location.origin : "https://agentshield.example"));
+  const [base, setBase] = useState(DEFAULT_BASE);
+  const [lang, setLang] = useState<Lang>("python");
+
+  useEffect(() => {
+    setBase(window.location.origin);
+  }, []);
+
+  const err = ERRORS[lang];
 
   return (
     <div className="space-y-3">
-      <Panel code="FDR-70" label="INTEGRATE" meta={["PRE-SIGN HOOK", base.replace(/^https?:\/\//, "")]} bodyClassName="px-4 py-3">
-        <p className="max-w-3xl text-sm text-mute">
-          Call AgentShield between &ldquo;the agent decided&rdquo; and &ldquo;the wallet signed&rdquo;. Send the transaction and the
-          provenance the agent acted on. Clear cases come back resolved. Judgment calls wait in your Review Queue. If the
-          shield is unreachable, fail closed.
-        </p>
-      </Panel>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="max-w-2xl">
+          <h2 className="text-xl font-semibold tracking-tight text-ink">Add AgentShield between your agent and its signer.</h2>
+          <p className="mt-1 text-[13px] text-mute">
+            The SDK sends the transaction, the human&apos;s intent and what the agent read. Your signer only runs when the verdict
+            allows it, and nothing is signed if the shield can&apos;t be reached.
+          </p>
+        </div>
+        <LangSwitch lang={lang} onChange={setLang} />
+      </div>
 
-      <Panel code="FDR-71" label="DECISION CONTRACT" meta={["WHAT YOUR SIGNER DOES"]}>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[520px] text-left text-sm">
-            <thead className="terminal-header">
-              <tr className="border-b border-line">
-                <th className="w-40 px-4 py-2 font-normal">decision</th>
-                <th className="px-4 py-2 font-normal">your agent</th>
-                <th className="px-4 py-2 font-normal">you</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b border-line">
-                <td className="px-4 py-3"><DecisionBadge decision="ALLOW" size="md" /></td>
-                <td className="px-4 py-3 text-ink">Sign and broadcast.</td>
-                <td className="px-4 py-3 text-mute">Nothing. Logged to the recorder.</td>
-              </tr>
-              <tr className="border-b border-line">
-                <td className="px-4 py-3"><DecisionBadge decision="BLOCK" size="md" /></td>
-                <td className="px-4 py-3 text-ink">Discard the transaction. Never retry it as-is.</td>
-                <td className="px-4 py-3 text-mute">Already paged, with the evidence and full trace.</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3"><DecisionBadge decision="QUARANTINE" size="md" /></td>
-                <td className="px-4 py-3 text-ink">Hold. Poll the verdict until it is <span className="font-mono text-[13px]">approved</span> or <span className="font-mono text-[13px]">denied</span>.</td>
-                <td className="px-4 py-3 text-mute">Approve or deny in the Review Queue.</td>
-              </tr>
-            </tbody>
-          </table>
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+        <div className="min-w-0 space-y-3">
+          <Panel label="Install" meta={[lang === "python" ? "Python 3.10+, depends on httpx" : "Node 18+, no runtime dependencies"]} bodyClassName="space-y-2 p-4">
+            <CodeBlock code={INSTALL[lang]} label="install command" />
+            <p className="text-xs text-faint">From the repository. The packages are not published to PyPI or npm yet.</p>
+          </Panel>
+
+          <Panel label="Decision contract" meta={["What guard() does"]}>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[520px] text-left text-[13px]">
+                <thead>
+                  <tr className="border-b border-line text-xs text-faint">
+                    <th className="w-36 px-4 py-2 font-normal">Verdict</th>
+                    <th className="px-4 py-2 font-normal">Your agent</th>
+                    <th className="px-4 py-2 font-normal">You</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  <tr>
+                    <td className="px-4 py-3 align-top"><DecisionBadge decision="ALLOW" /></td>
+                    <td className="px-4 py-3 text-ink">Calls your signer and returns its result.</td>
+                    <td className="px-4 py-3 text-mute">Nothing. The check is recorded.</td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 align-top"><DecisionBadge decision="BLOCK" /></td>
+                    <td className="px-4 py-3 text-ink">
+                      Raises <Mono>{err.blocked}</Mono>. The signer never runs.
+                    </td>
+                    <td className="px-4 py-3 text-mute">Paged with the evidence and trace.</td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 align-top"><DecisionBadge decision="QUARANTINE" /></td>
+                    <td className="px-4 py-3 text-ink">
+                      Waits for an operator, then signs or raises <Mono>{err.denied}</Mono>. Gives up with <Mono>{err.timeout}</Mono>.
+                    </td>
+                    <td className="px-4 py-3 text-mute">Approve or deny in the Review queue.</td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 align-top"><Tag>Unreachable</Tag></td>
+                    <td className="px-4 py-3 text-ink">
+                      Raises <Mono>{err.down}</Mono> and fails closed.
+                    </td>
+                    <td className="px-4 py-3 text-mute">Check the agent status in the console.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </Panel>
+        </div>
+
+        <Panel label="Quickstart" meta={[lang === "python" ? "web3.py signer" : "viem wallet client"]} bodyClassName="p-4" className="min-w-0">
+          <CodeBlock code={quickstart(lang, base)} label="quickstart code" />
+        </Panel>
+      </div>
+
+      <Panel label="Raw HTTP" meta={["Free, POST /api/rpc"]} bodyClassName="space-y-3 p-4">
+        <p className="text-[13px] text-mute">No SDK? Call the route directly and sign only when the decision is ALLOW.</p>
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+          <CodeBlock code={curlSnippet(base)} label="curl request" />
+          <CodeBlock code={CURL_RESPONSE} label="response" />
         </div>
       </Panel>
 
-      <div className="grid gap-3 xl:grid-cols-[1.1fr_0.9fr]">
-        <CodePanel code="FDR-72" label="CURL" meta={["FREE", "POST /api/rpc", "FAST MODE"]} snippet={curlSnippet(base)} />
-        <CodePanel code="FDR-73" label="RESPONSE" meta={["EXCERPT", "VERDICT"]} snippet={CURL_RESPONSE} />
-      </div>
-
-      <CodePanel code="FDR-74" label="PYTHON · SIGNER GUARD" meta={["REQUESTS", "AGENT MODE", "guard_then_sign()"]} snippet={pythonSnippet(base)} />
-
-      <CodePanel code="FDR-75" label="NODE · X402 PAY-PER-CHECK" meta={["NO ACCOUNT", "USDC · BASE SEPOLIA 84532"]} snippet={x402Snippet(base)} />
-      <div className="border border-line bg-panel px-4 py-3 text-sm text-mute">
-        <span className="terminal-header mr-2 !text-ink">note</span>
-        This is optional, for external agents with no account. They pay per check over x402 using{" "}
-        <span className="text-ink">free testnet USDC</span> on Base Sepolia. An unpaid request gets HTTP 402 with the price.
-        The settlement receipt comes back in the <span className="font-mono text-[13px]">X-PAYMENT-RESPONSE</span> header.
-        This console and <span className="font-mono text-[13px]">/api/rpc</span> are free.
-      </div>
+      <Panel label="Pay per check with x402" meta={["USDC on Base Sepolia"]} bodyClassName="grid gap-4 p-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+        <div className="min-w-0 space-y-3">
+          <p className="text-[13px] text-mute">
+            External agents can pay per check instead of using the free route. No account or API key: an unpaid request gets
+            HTTP 402 with the price, and the settlement receipt comes back in the <Mono>X-PAYMENT-RESPONSE</Mono> header.
+          </p>
+          <div className="overflow-x-auto rounded-md border border-line">
+            <table className="w-full min-w-[320px] text-left text-[13px]">
+              <thead>
+                <tr className="border-b border-line text-xs text-faint">
+                  <th className="px-3 py-2 font-normal">Endpoint</th>
+                  <th className="px-3 py-2 font-normal">Price</th>
+                  <th className="px-3 py-2 font-normal">Runs</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                <tr>
+                  <td className="px-3 py-2"><Mono>/api/v1/shield</Mono></td>
+                  <td className="px-3 py-2 font-mono tabular-nums text-ink">$0.001</td>
+                  <td className="px-3 py-2 text-mute">Fast mode</td>
+                </tr>
+                <tr>
+                  <td className="px-3 py-2"><Mono>/api/v1/shield/agent</Mono></td>
+                  <td className="px-3 py-2 font-mono tabular-nums text-ink">$0.01</td>
+                  <td className="px-3 py-2 text-mute">Agent mode</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-faint">
+            Uses free testnet USDC. The TypeScript client takes any fetch, so wrap it with x402-fetch. The Python client does not
+            support x402 yet.
+          </p>
+        </div>
+        <CodeBlock code={x402Snippet(base)} label="x402 example" />
+      </Panel>
     </div>
   );
 }

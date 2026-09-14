@@ -10,3 +10,5 @@ tests
 .next
 **/__pycache__
 .clickhouse/
+sdk
+.next-*

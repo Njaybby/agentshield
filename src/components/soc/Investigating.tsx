@@ -1,58 +1,84 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CircleNotch } from "@phosphor-icons/react";
+import { motion, useReducedMotion } from "motion/react";
 import type { Mode } from "@/lib/types";
 
-const STAGES_AGENT = [
-  "strands.plan",
-  "scan_provenance",
-  "decode_calldata",
-  "simulate_tx",
-  "goplus.security",
-  "registry.lookup",
-  "gate1.evaluate",
-  "gate2.adversarial_review",
-  "strands.finalize",
-];
-const STAGES_FAST = ["scan_provenance", "decode_calldata", "simulate_tx", "goplus.security", "registry.lookup", "gate1.evaluate", "gate2.heuristic"];
+const STEPS: Record<Mode, string[]> = {
+  agent: [
+    "Plan the investigation",
+    "Scan provenance for injection",
+    "Decode calldata",
+    "Simulate on Base",
+    "GoPlus token and address risk",
+    "On-chain registry lookup",
+    "Gate 1 policy firewall",
+    "Gate 2 adversarial review",
+    "Submit verdict",
+  ],
+  fast: [
+    "Scan provenance for injection",
+    "Decode calldata",
+    "Simulate on Base",
+    "GoPlus token and address risk",
+    "On-chain registry lookup",
+    "Gate 1 policy firewall",
+    "Gate 2 heuristic",
+  ],
+};
 
-/** Live in-flight recorder state. Stage list is the expected pipeline, not a claim of progress. */
+// Rough pacing for the highlight only. The list is what a run usually does, not live progress.
+const STEP_MS: Record<Mode, number> = { agent: 3200, fast: 160 };
+
 export function Investigating({ mode, label, startedAt }: { mode: Mode; label: string; startedAt: number }) {
+  const reduce = useReducedMotion();
   const [now, setNow] = useState(startedAt);
+
   useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 87);
+    const id = window.setInterval(() => setNow(Date.now()), 100);
     return () => window.clearInterval(id);
   }, []);
+
   const elapsed = Math.max(0, now - startedAt);
-  const stages = mode === "agent" ? STAGES_AGENT : STAGES_FAST;
-  const cursor = Math.floor(elapsed / 700) % stages.length;
-  const secs = (elapsed / 1000).toFixed(1).padStart(4, "0");
+  const steps = STEPS[mode];
+  const cursor = Math.min(steps.length - 1, Math.floor(elapsed / STEP_MS[mode]));
 
   return (
-    <div className="scanline relative overflow-hidden border border-quarantine/50 bg-[#0f0d08]" role="status" aria-live="polite">
-      <div className="absolute inset-x-0 top-0 h-px overflow-hidden bg-quarantine/20">
-        <div className="sweep h-px w-1/4 bg-quarantine" />
-      </div>
-      <div className="terminal-header flex flex-wrap items-center justify-between gap-2 border-b border-quarantine/20 px-4 py-1.5">
-        <span className="text-quarantine">FDR-LIVE · INVESTIGATING · {mode === "agent" ? "STRANDS + BEDROCK" : "DETERMINISTIC"}</span>
-        <span>REC ●</span>
-      </div>
-      <div className="grid gap-5 px-4 py-5 md:grid-cols-[auto_1fr] md:items-center">
-        <div>
-          <div className="font-mono text-5xl tabular-nums tracking-tight text-quarantine">{secs}s</div>
-          <div className="mt-1 max-w-[260px] truncate font-mono text-[11px] text-mute">{label}</div>
-          {mode === "agent" && (
-            <div className="mt-1 font-mono text-[10px] text-mute/70">LLM investigations take 10-40s</div>
-          )}
+    <div role="status" aria-live="polite" className="rounded-[10px] border border-line bg-panel">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-line px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <CircleNotch size={16} className={`shrink-0 text-mute ${reduce ? "" : "animate-spin"}`} aria-hidden />
+          <span className="text-sm font-medium text-ink">Investigating</span>
+          <span className="truncate text-[13px] text-faint">{label}</span>
         </div>
-        <ol className="grid grid-cols-1 gap-x-4 gap-y-1 font-mono text-[11px] sm:grid-cols-2 lg:grid-cols-3">
-          {stages.map((s, i) => (
-            <li key={s} className={`flex items-center gap-2 ${i === cursor ? "text-ink" : "text-mute/50"}`}>
-              <span className={`h-1.5 w-1.5 ${i === cursor ? "bg-quarantine" : "bg-line-strong"}`} aria-hidden />
-              {s}
-              {i === cursor && <span className="blink text-quarantine">_</span>}
-            </li>
-          ))}
+        <div className="flex items-baseline gap-2">
+          <span className="font-mono text-sm tabular-nums text-ink">{(elapsed / 1000).toFixed(1)} s</span>
+          <span className="text-xs text-faint">{mode === "agent" ? "usually 10 to 40 s" : "usually under 2 s"}</span>
+        </div>
+      </div>
+      <div className="px-4 py-3">
+        <div className="mb-2 text-xs text-faint">Typical steps</div>
+        <ol className="grid gap-x-6 gap-y-1.5 sm:grid-cols-2 lg:grid-cols-3">
+          {steps.map((s, i) => {
+            const current = !reduce && i === cursor;
+            return (
+              <li key={s} className="flex min-w-0 items-center gap-2 text-[13px]">
+                <span className="w-4 shrink-0 font-mono text-[11px] tabular-nums text-faint">{i + 1}</span>
+                {current ? (
+                  <motion.span
+                    className="truncate text-ink"
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    {s}
+                  </motion.span>
+                ) : (
+                  <span className="truncate text-mute">{s}</span>
+                )}
+              </li>
+            );
+          })}
         </ol>
       </div>
     </div>

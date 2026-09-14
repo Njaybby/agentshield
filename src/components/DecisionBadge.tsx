@@ -7,9 +7,9 @@ export const decisionText: Record<Decision, string> = {
 };
 
 export const decisionBorder: Record<Decision, string> = {
-  ALLOW: "border-allow",
-  BLOCK: "border-block",
-  QUARANTINE: "border-quarantine",
+  ALLOW: "border-allow/35",
+  BLOCK: "border-block/35",
+  QUARANTINE: "border-quarantine/35",
 };
 
 export const decisionBg: Record<Decision, string> = {
@@ -18,22 +18,31 @@ export const decisionBg: Record<Decision, string> = {
   QUARANTINE: "bg-quarantine",
 };
 
+export const decisionTint: Record<Decision, string> = {
+  ALLOW: "bg-allow/10",
+  BLOCK: "bg-block/10",
+  QUARANTINE: "bg-quarantine/10",
+};
+
+export const decisionLabel: Record<Decision, string> = {
+  ALLOW: "Allow",
+  BLOCK: "Block",
+  QUARANTINE: "Quarantine",
+};
+
 export function DecisionBadge({
   decision,
-  pulse,
   size = "sm",
 }: {
   decision: Decision;
   pulse?: boolean;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
 }) {
+  const sz = { sm: "h-5 px-1.5 text-[10.5px]", md: "h-6 px-2 text-[11px]", lg: "h-8 px-2.5 text-[13px]" }[size];
   return (
     <span
-      className={`inline-flex items-center gap-1.5 border font-mono font-medium uppercase tracking-[0.12em] ${
-        size === "md" ? "px-2.5 py-1 text-xs" : "px-1.5 py-0.5 text-[10px]"
-      } ${decisionBorder[decision]} ${decisionText[decision]} ${pulse && decision === "BLOCK" ? "pulse-block" : ""}`}
+      className={`inline-flex shrink-0 items-center rounded border font-mono font-medium uppercase tracking-[0.06em] ${sz} ${decisionBorder[decision]} ${decisionTint[decision]} ${decisionText[decision]}`}
     >
-      <span className={`h-1.5 w-1.5 ${decisionBg[decision]}`} aria-hidden />
       {decision}
     </span>
   );
@@ -41,19 +50,19 @@ export function DecisionBadge({
 
 export function StatusTag({ status }: { status: VerdictStatus }) {
   const map: Record<VerdictStatus, string> = {
-    final: "text-mute border-line-strong",
-    pending_review: "text-quarantine border-quarantine/60",
-    approved: "text-allow border-allow/60",
-    denied: "text-block border-block/60",
+    final: "border-line-strong text-faint",
+    pending_review: "border-quarantine/35 bg-quarantine/10 text-quarantine",
+    approved: "border-allow/35 bg-allow/10 text-allow",
+    denied: "border-block/35 bg-block/10 text-block",
   };
   const label: Record<VerdictStatus, string> = {
-    final: "FINAL",
-    pending_review: "AWAITING OPERATOR",
-    approved: "APPROVED",
-    denied: "DENIED",
+    final: "Final",
+    pending_review: "Awaiting review",
+    approved: "Approved",
+    denied: "Denied",
   };
   return (
-    <span className={`inline-block border px-1.5 py-0.5 font-mono text-[10px] tracking-[0.12em] ${map[status]}`}>
+    <span className={`inline-flex h-5 shrink-0 items-center rounded border px-1.5 text-[11px] ${map[status]}`}>
       {label[status]}
     </span>
   );

@@ -57,3 +57,4 @@ build/
 notes/
 .clickhouse/
 contracts/broadcast/
+/.next-*/

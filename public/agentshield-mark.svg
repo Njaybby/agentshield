@@ -1,13 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <rect width="64" height="64" rx="6" fill="#0a0a0a"/>
-  <!-- shield body -->
-  <path d="M32 8 L52 16 V34 C52 46 40 54 32 58 C24 54 12 46 12 34 V16 Z" stroke="#ef4444" stroke-width="2.5" fill="none"/>
-  <!-- feline ears -->
-  <path d="M20 18 L26 10 L28 20" stroke="#ef4444" stroke-width="2.2" stroke-linejoin="miter" fill="none"/>
-  <path d="M44 18 L38 10 L36 20" stroke="#ef4444" stroke-width="2.2" stroke-linejoin="miter" fill="none"/>
-  <!-- eyes -->
-  <circle cx="26" cy="30" r="2.4" fill="#ef4444"/>
-  <circle cx="38" cy="30" r="2.4" fill="#ef4444"/>
-  <!-- muzzle notch -->
-  <path d="M29 38 L32 41 L35 38" stroke="#ef4444" stroke-width="2" stroke-linecap="square"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <path d="M16 3.5 26 7.5v8.2c0 6.1-4.3 10.6-10 12.8C10.3 26.3 6 21.8 6 15.7V7.5l10-4Z" stroke="#ededef" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M11 11.5 13 8.5l1.2 3M21 11.5 19 8.5l-1.2 3" stroke="#ededef" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M11.5 16c1.2-1.1 2.8-1.1 4 0M16.5 16c1.2-1.1 2.8-1.1 4 0" stroke="#ededef" stroke-width="1.6" stroke-linecap="round"/>
 </svg>

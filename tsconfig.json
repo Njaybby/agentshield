@@ -31,9 +31,13 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
+    ".next-a/types/**/*.ts",
+    ".next-b/types/**/*.ts",
+    ".next-c/types/**/*.ts",
+    ".next-verify/types/**/*.ts",
     ".next/types/**/*.ts",
     "next-env.d.ts",
-    ".next-verify/types/**/*.ts"
+    ".next-qa/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
@@ -41,6 +45,11 @@
     "build",
     "contracts",
     "scripts",
-    "tests"
+    "tests",
+    "sdk",
+    "notes",
+    ".next-a",
+    ".next-b",
+    ".next-c"
   ]
 }
