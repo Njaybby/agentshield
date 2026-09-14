@@ -1,59 +1,158 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" role="img" aria-label="AgentShield architecture">
-  <rect width="960" height="560" fill="#0a0a0a"/>
-  <text x="40" y="40" fill="#8a8a8a" font-family="monospace" font-size="12">AGENTSHIELD × STRANDS · PROFESSIONAL AGENTS · AGENTS FOR HUMANS</text>
-  <text x="40" y="72" fill="#f0f0f0" font-family="sans-serif" font-size="22" font-weight="600">Architecture</text>
-
-  <rect x="40" y="100" width="200" height="70" fill="#111" stroke="#333"/>
-  <text x="50" y="128" fill="#8a8a8a" font-family="monospace" font-size="10">HUMAN OPERATOR</text>
-  <text x="50" y="150" fill="#f0f0f0" font-family="sans-serif" font-size="13">Intent / approval</text>
-
-  <rect x="280" y="100" width="220" height="70" fill="#111" stroke="#333"/>
-  <text x="290" y="128" fill="#8a8a8a" font-family="monospace" font-size="10">TRADING AGENT</text>
-  <text x="290" y="150" fill="#f0f0f0" font-family="sans-serif" font-size="13">Proposes tx + provenance</text>
-
-  <path d="M240 135 H280" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
-  <path d="M500 135 H540" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
-
-  <rect x="540" y="80" width="380" height="200" fill="#111" stroke="#f0f0f0" stroke-width="1.5"/>
-  <text x="555" y="105" fill="#8a8a8a" font-family="monospace" font-size="10">STRANDS AGENTS SDK LOOP</text>
-  <text x="555" y="128" fill="#f0f0f0" font-family="sans-serif" font-size="14" font-weight="600">AgentShield Professional Agent</text>
-  <text x="555" y="155" fill="#a3a3a3" font-family="sans-serif" font-size="12">Bedrock (default) or SpaceXAI / OpenAI</text>
-  <text x="555" y="185" fill="#3dd68c" font-family="monospace" font-size="11">tools: scan_injection · honeypot · CTI</text>
-  <text x="555" y="205" fill="#3dd68c" font-family="monospace" font-size="11">gate1 · gate2 · finalize · notify</text>
-  <text x="555" y="235" fill="#a3a3a3" font-family="sans-serif" font-size="12">Surfaces human only on BLOCK / QUARANTINE</text>
-  <text x="555" y="255" fill="#a3a3a3" font-family="sans-serif" font-size="12">Never sees trading-agent chat</text>
-
-  <path d="M730 280 V320" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
-
-  <rect x="40" y="320" width="280" height="90" fill="#111" stroke="#333"/>
-  <text x="50" y="348" fill="#8a8a8a" font-family="monospace" font-size="10">GATE 1 · DETERMINISTIC</text>
-  <text x="50" y="372" fill="#f0f0f0" font-family="sans-serif" font-size="12">Caps · lists · Morse/stego</text>
-  <text x="50" y="392" fill="#f0f0f0" font-family="sans-serif" font-size="12">Honeypot / drainer IOC</text>
-
-  <rect x="340" y="320" width="280" height="90" fill="#111" stroke="#333"/>
-  <text x="350" y="348" fill="#8a8a8a" font-family="monospace" font-size="10">GATE 2 · ADVERSARIAL</text>
-  <text x="350" y="372" fill="#f0f0f0" font-family="sans-serif" font-size="12">Hijack likelihood on</text>
-  <text x="350" y="392" fill="#f0f0f0" font-family="sans-serif" font-size="12">tx + provenance only</text>
-
-  <rect x="640" y="320" width="280" height="90" fill="#111" stroke="#333"/>
-  <text x="650" y="348" fill="#8a8a8a" font-family="monospace" font-size="10">CTI-AGENT + ELASTIC</text>
-  <text x="650" y="372" fill="#f0f0f0" font-family="sans-serif" font-size="12">IOC feed · Security events</text>
-  <text x="650" y="392" fill="#f0f0f0" font-family="sans-serif" font-size="12">Flight Recorder SOC UI</text>
-
-  <path d="M180 410 V450" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
-  <path d="M480 410 V450" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
-  <path d="M780 410 V450" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
-
-  <rect x="40" y="450" width="880" height="70" fill="#161616" stroke="#333"/>
-  <text x="50" y="480" fill="#8a8a8a" font-family="monospace" font-size="10">OUTCOME</text>
-  <text x="50" y="505" fill="#3dd68c" font-family="sans-serif" font-size="14">ALLOW</text>
-  <text x="140" y="505" fill="#ff4d4d" font-family="sans-serif" font-size="14">BLOCK</text>
-  <text x="240" y="505" fill="#f5a524" font-family="sans-serif" font-size="14">QUARANTINE</text>
-  <text x="400" y="505" fill="#a3a3a3" font-family="sans-serif" font-size="13">→ TEE signer / x402 receipt / operator notify</text>
-
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800" role="img" aria-label="AgentShield architecture">
   <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M0 0 L10 5 L0 10 z" fill="#555"/>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8a8a8a"/>
     </marker>
+    <marker id="arrowRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#ef4444"/>
+    </marker>
+    <style>
+      .bg { fill: #0a0a0a; }
+      .box { fill: #111111; stroke: #2a2a2a; stroke-width: 1; }
+      .boxRed { fill: #140c0c; stroke: #ef4444; stroke-width: 1.2; }
+      .runtime { fill: none; stroke: #ef4444; stroke-width: 1.4; stroke-dasharray: 6 4; }
+      .hdr { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; letter-spacing: 1px; fill: #8a8a8a; }
+      .hdrRed { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; letter-spacing: 1px; fill: #ef4444; }
+      .title { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 30px; fill: #f0f0f0; }
+      .name { font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; fill: #f0f0f0; }
+      .line { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; fill: #c8c8c8; }
+      .dim { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 10.5px; fill: #7a7a7a; }
+      .edge { stroke: #8a8a8a; stroke-width: 1.2; fill: none; }
+      .edgeRed { stroke: #ef4444; stroke-width: 1.2; fill: none; }
+      .allow { fill: #22c55e; }
+      .quar { fill: #f5a524; }
+      .block { fill: #ef4444; }
+    </style>
   </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="800"/>
+
+  <!-- Header -->
+  <text class="hdr" x="40" y="38">FDR-ARCH · AGENTSHIELD · STRANDS AGENTS · CLAUDE · VERCEL · BASE 8453</text>
+  <text class="title" x="40" y="76">Pre-trade firewall for autonomous trading agents</text>
+
+  <!-- Column 1: actors -->
+  <rect class="box" x="40" y="110" width="220" height="80"/>
+  <text class="hdr" x="54" y="132">HUMAN OPERATOR</text>
+  <text class="line" x="54" y="156">reviews QUARANTINE holds</text>
+  <text class="line" x="54" y="174">approve / deny with note</text>
+
+  <rect class="box" x="40" y="220" width="220" height="80"/>
+  <text class="hdr" x="54" y="242">TRADING AGENT</text>
+  <text class="line" x="54" y="266">proposes tx + provenance</text>
+  <text class="line" x="54" y="284">(what it read, never its chat)</text>
+
+  <rect class="box" x="40" y="330" width="220" height="80"/>
+  <text class="hdr" x="54" y="352">EXTERNAL AGENT</text>
+  <text class="line" x="54" y="376">pays per check via x402</text>
+  <text class="line" x="54" y="394">no account, no API key</text>
+
+  <rect class="box" x="40" y="620" width="220" height="130"/>
+  <text class="hdr" x="54" y="642">EXTERNAL DATA</text>
+  <text class="line" x="54" y="668">Base public RPC</text>
+  <text class="line" x="54" y="688">GoPlus Security API</text>
+  <text class="line" x="54" y="708">token + address risk</text>
+  <text class="dim" x="54" y="734">read-only, cached</text>
+
+  <!-- Column 2: Vercel app + facilitator + review queue -->
+  <rect class="box" x="300" y="110" width="250" height="190"/>
+  <text class="hdr" x="314" y="132">VERCEL · NEXT.JS</text>
+  <text class="name" x="314" y="156">Flight Recorder</text>
+  <text class="line" x="314" y="182">/soc  Attack Lab · Inspect</text>
+  <text class="line" x="314" y="200">      Review · Analytics · CTI</text>
+  <text class="line" x="314" y="224">/api/rpc  free, agent mode</text>
+  <text class="line" x="314" y="242">          rate limited</text>
+  <text class="line" x="314" y="266">/api/v1/shield  x402-gated</text>
+  <text class="dim" x="314" y="288">→ agent API POST /rpc</text>
+
+  <rect class="box" x="300" y="330" width="250" height="80"/>
+  <text class="hdr" x="314" y="352">x402 FACILITATOR</text>
+  <text class="line" x="314" y="376">verify + settle payment</text>
+  <text class="line" x="314" y="394">USDC · Base Sepolia</text>
+
+  <rect class="boxRed" x="300" y="620" width="250" height="130"/>
+  <text class="hdrRed" x="314" y="642">REVIEW QUEUE</text>
+  <text class="line" x="314" y="668">QUARANTINE → pending_review</text>
+  <text class="line" x="314" y="688">operator APPROVE / DENY</text>
+  <text class="line" x="314" y="708">written back as a new</text>
+  <text class="line" x="314" y="726">row version</text>
+
+  <!-- Column 3: AgentCore runtime -->
+  <rect class="runtime" x="585" y="100" width="580" height="485"/>
+  <text class="hdrRed" x="600" y="122">AGENT API · VERCEL PYTHON FUNCTION · AGENTCORE-READY · agent/api.py</text>
+
+  <rect class="box" x="605" y="140" width="265" height="160"/>
+  <text class="hdr" x="619" y="162">GATE 1 · DETERMINISTIC</text>
+  <text class="line" x="619" y="188">value caps · rate limit</text>
+  <text class="line" x="619" y="206">counterparty + spender novelty</text>
+  <text class="line" x="619" y="224">injection · Morse · Unicode tags</text>
+  <text class="line" x="619" y="242">honeypot / drainer IOCs</text>
+  <text class="line" x="619" y="260">chain checks C1-C5</text>
+  <text class="dim" x="619" y="286">critical fail = hard BLOCK</text>
+
+  <rect class="box" x="880" y="140" width="265" height="160"/>
+  <text class="hdr" x="894" y="162">CHAIN EVIDENCE · BASE 8453</text>
+  <text class="line" x="894" y="188">eth_getCode bytecode</text>
+  <text class="line" x="894" y="206">eth_call simulation</text>
+  <text class="line" x="894" y="224">  (balance state override)</text>
+  <text class="line" x="894" y="242">calldata decode (eth-abi)</text>
+  <text class="line" x="894" y="260">GoPlus token + address</text>
+  <text class="dim" x="894" y="286">parallel lookups</text>
+
+  <rect class="box" x="605" y="320" width="265" height="160"/>
+  <text class="hdr" x="619" y="342">STRANDS ORCHESTRATOR</text>
+  <text class="line" x="619" y="368">Claude Opus 5 (API or Bedrock)</text>
+  <text class="line" x="619" y="386">7 @tool functions</text>
+  <text class="line" x="619" y="404">lookup_threat_intel on any</text>
+  <text class="line" x="619" y="422">  address in tx or provenance</text>
+  <text class="line" x="619" y="440">submit_verdict · notify_operator</text>
+  <text class="dim" x="619" y="466">TraceHooks → trace steps</text>
+
+  <rect class="boxRed" x="880" y="320" width="265" height="160"/>
+  <text class="hdrRed" x="894" y="342">GATE 2 · ISOLATED REVIEWER</text>
+  <text class="line" x="894" y="368">Strands sub-agent</text>
+  <text class="line" x="894" y="386">Claude Haiku 4.5 · structured</text>
+  <text class="line" x="894" y="404">untrusted content fenced</text>
+  <text class="line" x="894" y="422">never sees orchestrator</text>
+  <text class="line" x="894" y="440">  reasoning</text>
+  <text class="dim" x="894" y="466">hijack_likelihood · attack_class</text>
+
+  <rect class="box" x="605" y="500" width="540" height="66"/>
+  <text class="line" x="619" y="526">strictest(Gate 1 floor, Gate 2, orchestrator) →</text>
+  <text class="line allow" x="990" y="526">ALLOW</text>
+  <text class="line quar" x="619" y="548">QUARANTINE</text>
+  <text class="line block" x="700" y="548">BLOCK</text>
+  <text class="dim" x="760" y="548">models can escalate a verdict, never relax it</text>
+
+  <!-- Bottom: ClickHouse + registry -->
+  <rect class="box" x="585" y="620" width="280" height="130"/>
+  <text class="hdr" x="599" y="642">CLICKHOUSE · FLIGHT RECORDER</text>
+  <text class="line" x="599" y="668">verdicts ReplacingMergeTree</text>
+  <text class="line" x="599" y="686">trace_steps MergeTree</text>
+  <text class="line" x="599" y="706">timeline · p50/p95/p99</text>
+  <text class="line" x="599" y="724">per-agent anomaly z-scores</text>
+
+  <rect class="box" x="885" y="620" width="280" height="130"/>
+  <text class="hdr" x="899" y="642">REPUTATIONREGISTRY · 84532</text>
+  <text class="line" x="899" y="668">ERC-8004-inspired CTI registry</text>
+  <text class="line" x="899" y="686">stake-gated IOC publishing</text>
+  <text class="line" x="899" y="706">stake-weighted confidence</text>
+  <text class="line" x="899" y="724">getIOCByTarget(address)</text>
+
+  <!-- Edges -->
+  <path class="edge" d="M260,260 L300,230" marker-end="url(#arrow)"/>
+  <path class="edge" d="M260,370 L300,370" marker-end="url(#arrow)"/>
+  <path class="edge" d="M425,330 L425,300" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+  <path class="edge" d="M550,205 L605,205" marker-end="url(#arrow)"/>
+  <path class="edge" d="M870,220 L880,220" marker-end="url(#arrow)"/>
+  <path class="edge" d="M737,300 L737,320" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+  <path class="edge" d="M870,400 L880,400" marker-end="url(#arrow)"/>
+  <path class="edge" d="M737,480 L737,500" marker-end="url(#arrow)"/>
+  <path class="edge" d="M725,585 L725,620" marker-end="url(#arrow)"/>
+  <path class="edge" d="M1012,300 L1012,310 L1175,310 L1175,685 L1165,685" marker-end="url(#arrow)"/>
+  <path class="edgeRed" d="M605,540 L570,540 L570,640 L550,640" marker-end="url(#arrowRed)"/>
+  <path class="edge" d="M300,700 L280,700 L280,150 L260,150" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+  <path class="edge" d="M880,170 L870,170 L870,120 L575,120 L575,600 L150,600 L150,620" marker-end="url(#arrow)"/>
+
+  <text class="dim" x="40" y="785">Verdicts and full traces are stored in ClickHouse; function instances are stateless. Registry IOC addresses in the Attack Lab are lab fixtures.</text>
 </svg>
