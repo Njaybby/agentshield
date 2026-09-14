@@ -1,0 +1,14 @@
+.env
+.env.*
+.venv
+node_modules
+.next
+build
+src
+public
+contracts
+agentcore
+scripts
+tests
+docs
+**/__pycache__

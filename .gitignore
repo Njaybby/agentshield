@@ -47,3 +47,11 @@ contracts/out/
 contracts/cache/
 contracts/broadcast/*/31337/
 __pycache__/
+
+# AgentCore
+agentcore/agentcore.json
+agentcore/aws-targets.json
+build/
+
+# submission drafts, kept out of the repo
+notes/
