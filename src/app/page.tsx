@@ -56,7 +56,7 @@ export default function HomePage() {
         <section className="mx-auto grid max-w-[1400px] items-center gap-10 px-4 pb-14 pt-12 md:px-6 md:pt-20 lg:grid-cols-[1fr_1.05fr] lg:gap-14 lg:pb-20">
           <div className="min-w-0">
             <p className="mb-5 text-[13px] text-faint">Built with Strands Agents on AWS</p>
-            <h1 className="max-w-[20ch] text-[40px] font-semibold leading-[1.04] tracking-[-0.035em] md:text-[56px]">
+            <h1 className="max-w-[16ch] text-[40px] font-semibold leading-[1.04] tracking-[-0.035em] md:text-[56px]">
               Stop the agent before it signs the drain.
             </h1>
             <p className="mt-5 max-w-[46ch] text-[17px] leading-relaxed text-mute">
