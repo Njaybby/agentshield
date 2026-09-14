@@ -3,7 +3,7 @@ import { Shell } from "@/components/Shell";
 import { FlightRecorder } from "@/components/soc/FlightRecorder";
 
 export const metadata: Metadata = {
-  title: "Flight Recorder | AgentShield",
+  title: "Console",
 };
 
 export default function SocPage() {

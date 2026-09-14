@@ -95,11 +95,13 @@ export default function HomePage() {
               <span className="absolute left-0 right-0 top-[19px] hidden h-px bg-line-strong md:block" aria-hidden />
               {STEPS.map(({ icon: Icon, title, body }) => (
                 <li key={title} className="relative min-w-0">
-                  <div className="relative grid h-10 w-10 place-items-center rounded-full border border-line-strong bg-canvas text-ink">
-                    <Icon size={18} />
+                  <div className="flex items-center gap-3 md:block">
+                    <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full border border-line-strong bg-canvas text-ink">
+                      <Icon size={18} />
+                    </div>
+                    <h3 className="text-[15px] font-medium text-ink md:mt-5">{title}</h3>
                   </div>
-                  <h3 className="mt-5 text-[15px] font-medium text-ink">{title}</h3>
-                  <p className="mt-2 max-w-[34ch] text-[14px] leading-relaxed text-mute">{body}</p>
+                  <p className="mt-3 max-w-[34ch] text-[14px] leading-relaxed text-mute md:mt-2">{body}</p>
                 </li>
               ))}
             </ol>
