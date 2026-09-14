@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-DEFAULT_BEDROCK_MODEL = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+DEFAULT_BEDROCK_MODEL = "us.anthropic.claude-sonnet-4-6"
 DEFAULT_BEDROCK_GATE2_MODEL = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
 DEFAULT_ANTHROPIC_MODEL = "claude-opus-5"
 DEFAULT_ANTHROPIC_GATE2_MODEL = "claude-haiku-4-5"
@@ -56,12 +56,10 @@ def resolve_model(role: str = "orchestrator") -> tuple[Any | None, str]:
         from strands.models import BedrockModel
 
         model_id = os.getenv("GATE2_MODEL_ID", DEFAULT_BEDROCK_GATE2_MODEL) if gate2 else os.getenv("BEDROCK_MODEL_ID", DEFAULT_BEDROCK_MODEL)
-        model = BedrockModel(
-            model_id=model_id,
-            region_name=os.getenv("AWS_REGION", "us-west-2"),
-            temperature=0.0,
-            max_tokens=4096 if gate2 else 8192,
-        )
+        kwargs: dict[str, Any] = {"model_id": model_id, "region_name": os.getenv("AWS_REGION", "us-west-2"), "max_tokens": 4096 if gate2 else 8192}
+        if not any(f in model_id for f in ("claude-opus-5", "claude-sonnet-5", "claude-fable-5")):
+            kwargs["temperature"] = 0.0  # Claude 5 models reject sampling params
+        model = BedrockModel(**kwargs)
         return model, "bedrock"
 
     if provider == "anthropic":
