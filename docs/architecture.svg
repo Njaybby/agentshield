@@ -28,7 +28,7 @@
   <rect class="bg" x="0" y="0" width="1200" height="800"/>
 
   <!-- Header -->
-  <text class="hdr" x="40" y="38">FDR-ARCH · AGENTSHIELD · STRANDS AGENTS · CLAUDE · VERCEL · BASE 8453</text>
+  <text class="hdr" x="40" y="38">FDR-ARCH · AGENTSHIELD · STRANDS AGENTS · AMAZON BEDROCK · BASE 8453</text>
   <text class="title" x="40" y="76">Pre-trade firewall for autonomous trading agents</text>
 
   <!-- Column 1: actors -->
@@ -40,7 +40,7 @@
   <rect class="box" x="40" y="220" width="220" height="80"/>
   <text class="hdr" x="54" y="242">TRADING AGENT</text>
   <text class="line" x="54" y="266">proposes tx + provenance</text>
-  <text class="line" x="54" y="284">(what it read, never its chat)</text>
+  <text class="line" x="54" y="284">SDK guard() wraps its signer</text>
 
   <rect class="box" x="40" y="330" width="220" height="80"/>
   <text class="hdr" x="54" y="352">EXTERNAL AGENT</text>
@@ -101,7 +101,7 @@
 
   <rect class="box" x="605" y="320" width="265" height="160"/>
   <text class="hdr" x="619" y="342">STRANDS ORCHESTRATOR</text>
-  <text class="line" x="619" y="368">Claude Opus 5 (API or Bedrock)</text>
+  <text class="line" x="619" y="368">Claude Sonnet 4.6 on Bedrock</text>
   <text class="line" x="619" y="386">7 @tool functions</text>
   <text class="line" x="619" y="404">lookup_threat_intel on any</text>
   <text class="line" x="619" y="422">  address in tx or provenance</text>
@@ -111,7 +111,7 @@
   <rect class="boxRed" x="880" y="320" width="265" height="160"/>
   <text class="hdrRed" x="894" y="342">GATE 2 · ISOLATED REVIEWER</text>
   <text class="line" x="894" y="368">Strands sub-agent</text>
-  <text class="line" x="894" y="386">Claude Haiku 4.5 · structured</text>
+  <text class="line" x="894" y="386">Haiku 4.5 on Bedrock</text>
   <text class="line" x="894" y="404">untrusted content fenced</text>
   <text class="line" x="894" y="422">never sees orchestrator</text>
   <text class="line" x="894" y="440">  reasoning</text>
