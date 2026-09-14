@@ -132,6 +132,43 @@ npm install && npm run build && npm start                           # console on
 
 ## Calling it from your agent
 
+### SDK
+
+`sdk/` has a Python package (`agentshield`, httpx only) and a TypeScript package (`@agentshield/sdk`, no runtime
+dependencies). `guard()` sends the check and only calls your signer on an allow. Not published yet; install from
+the repo.
+
+```bash
+pip install ./sdk/python
+npm install ./sdk/typescript
+```
+
+```python
+from agentshield import Shield, Blocked, ShieldUnavailable, request_from_tx
+
+shield = Shield("https://agentshield-lyart.vercel.app", mode="agent")
+req = request_from_tx(tx, intent="Approve the DEX router so I can swap 250 USDC", sources=[tool_output], agent_id="desk-02")
+
+try:
+    tx_hash = shield.guard(req, lambda _: w3.eth.send_transaction(tx))
+except Blocked as e:
+    log.warning("not signed: %s", e.verdict.operator_summary)
+except ShieldUnavailable:
+    log.error("shield unreachable, not signed")
+```
+
+| Verdict | guard() |
+|---------|---------|
+| ALLOW | calls the signer |
+| BLOCK | raises `Blocked` / `BlockedError` |
+| QUARANTINE | polls until an operator approves (signs) or denies (raises `Denied`) |
+| unreachable | raises `ShieldUnavailable` (fail closed) |
+
+Tests: `cd sdk/python && pytest` and `cd sdk/typescript && npm test` (12 each). `node sdk/examples/trading-bot.mjs`
+runs a drainer approval and a clean swap through the live shield.
+
+### Raw HTTP
+
 Sign only on `ALLOW`. On `QUARANTINE`, poll the verdict until an operator approves or denies it.
 
 ```bash
@@ -211,7 +248,7 @@ forge script script/Deploy.s.sol --rpc-url $BASE_SEPOLIA_RPC_URL --broadcast
 | `ANTHROPIC_API_KEY` | agent | Claude via the Anthropic API |
 | `ANTHROPIC_MODEL`, `ANTHROPIC_GATE2_MODEL` | agent | Defaults `claude-opus-5`, `claude-haiku-4-5` |
 | `AWS_REGION`, AWS credentials | agent, console | Bedrock models / AgentCore (used when credentials resolve) |
-| `BEDROCK_MODEL_ID`, `GATE2_MODEL_ID` | agent | Bedrock model IDs |
+| `BEDROCK_MODEL_ID`, `GATE2_MODEL_ID` | agent | Defaults `us.anthropic.claude-sonnet-4-6`, `us.anthropic.claude-haiku-4-5-20251001-v1:0` |
 | `MODEL_PROVIDER` | agent | Force `anthropic`, `bedrock`, `xai` or `openai` |
 | `BASE_RPC_URL`, `BASE_SEPOLIA_RPC_URL` | agent | RPC endpoints |
 | `REPUTATION_REGISTRY_ADDRESS` | agent | Registry on Base Sepolia |
@@ -228,19 +265,20 @@ forge script script/Deploy.s.sol --rpc-url $BASE_SEPOLIA_RPC_URL --broadcast
 
 Everything is free and needs no account.
 
-1. Open `https://agentshield-lyart.vercel.app/soc`.
-2. Attack Lab: **Run all** in Fast mode. Open a verdict for Gate 1, Gate 2, chain evidence and the trace.
+1. Open https://agentshield-lyart.vercel.app and scroll the recorded attacks, then open the console.
+2. Attack Lab: **Run all** in Fast mode. Open a verdict for the trace waterfall, failing checks, Gate 2 and chain evidence.
 3. Switch to Agent mode and run A7. Takes 10 to 40 seconds; limited to 8 runs per 10 minutes per visitor.
-4. Review Queue: approve or deny a quarantined verdict (A6).
-5. Inspect: submit your own intent, provenance and transaction.
-6. Analytics and CTI.
+4. Review: approve or deny a quarantined verdict (A6).
+5. Inspect: submit your own intent, sources and transaction.
+6. Analytics, Threat intel and Integrate (SDK snippets).
 
 ## Layout
 
 | Path | Contents |
 |------|----------|
 | `agent/` | Strands agent, gates, chain evidence, store, FastAPI app, CLI, AgentCore entrypoint |
-| `src/` | Next.js console and API routes |
+| `sdk/` | Python and TypeScript client SDKs, example trading bot |
+| `src/` | Next.js landing page, console and API routes |
 | `contracts/` | ReputationRegistry, QuerySettlement, tests, deploy script |
 | `agentcore/` | AgentCore CLI project (config template and generated CDK app) |
 | `scripts/` | Deploy staging scripts, x402 demo buyer |
