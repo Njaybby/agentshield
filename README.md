@@ -230,9 +230,11 @@ vercel deploy --prod                          # set AGENT_API_URL to the API dep
 
 Serverless instances do not share memory, so use a hosted ClickHouse for the review queue to work.
 
-The same dispatcher also runs on Amazon Bedrock AgentCore Runtime (`agent/agentcore_app.py`). With AWS
-credentials, `python scripts/stage_agentcore.py && cd agentcore && agentcore deploy -y`, then set
-`AGENTCORE_RUNTIME_ARN` on the console. A `Dockerfile` is included for other hosts.
+The same dispatcher runs on Amazon Bedrock AgentCore Runtime (`agent/agentcore_app.py`), deployed as
+`arn:aws:bedrock-agentcore:us-west-2:255260119970:runtime/AgentShield_agentshield-NnMGQX2p5P`.
+To deploy your own: `python scripts/stage_agentcore.py && cd agentcore && agentcore deploy -y`, then set
+`AGENTCORE_RUNTIME_ARN` and AWS credentials allowed to `bedrock-agentcore:InvokeAgentRuntime` on the console.
+A `Dockerfile` is included for other hosts.
 
 Contracts:
 
