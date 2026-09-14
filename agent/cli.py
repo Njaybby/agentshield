@@ -1,68 +1,50 @@
 #!/usr/bin/env python3
-"""CLI entrypoint for AgentShield Strands agent."""
+"""AgentShield CLI: python -m agent.cli attack --all | attack --id A7_SOCIAL_ENGINEERING --mode agent | health"""
 
 from __future__ import annotations
 
 import argparse
 import json
-import sys
 
-from .agentshield import invoke_for_payload, invoke_strands
-from .scenarios import SCENARIOS, get_scenario
-from . import shield_core as core
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from .api import handle  # noqa: E402
+from .scenarios import SCENARIOS  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(description="AgentShield Strands CLI")
+    p = argparse.ArgumentParser(description="AgentShield CLI")
     sub = p.add_subparsers(dest="cmd", required=True)
-
     sub.add_parser("health")
-
-    run = sub.add_parser("run", help="Run a natural-language investigation via Strands")
-    run.add_argument("prompt", nargs="+")
-
-    attack = sub.add_parser("attack", help="Run Attack Lab scenario (deterministic tools)")
-    attack.add_argument("--id", default="A1_MORSE_INJECTION")
+    attack = sub.add_parser("attack", help="Run Attack Lab scenarios")
+    attack.add_argument("--id")
     attack.add_argument("--all", action="store_true")
-    attack.add_argument("--strands", action="store_true", help="Also invoke Strands LLM loop")
-
+    attack.add_argument("--mode", choices=["fast", "agent"], default="fast")
+    attack.add_argument("--trace", action="store_true", help="Print the full trace")
     args = p.parse_args(argv)
 
     if args.cmd == "health":
-        from .model import resolve_model
-
-        _, provider = resolve_model()
-        print(json.dumps({"provider": provider, "strands_ready": provider != "none"}, indent=2))
+        print(json.dumps(handle("health", {}), indent=2))
         return 0
 
-    if args.cmd == "run":
-        out = invoke_strands(" ".join(args.prompt))
-        print(json.dumps(out, indent=2))
-        return 0 if out.get("ok") else 2
-
-    if args.cmd == "attack":
-        if args.all:
-            ok = 0
-            for s in SCENARIOS:
-                v = core.evaluate_shield(s["request"])
-                match = v["decision"] == s["expected"]
-                ok += int(match)
-                print(f"{'OK' if match else 'MISS'} {s['id']} → {v['decision']}")
-            print(f"score {ok}/{len(SCENARIOS)}")
-            return 0 if ok == len(SCENARIOS) else 1
-
-        s = get_scenario(args.id)
-        if not s:
-            print("unknown scenario", file=sys.stderr)
+    ids = [s["id"] for s in SCENARIOS] if args.all or not args.id else [args.id]
+    matched = 0
+    for sid in ids:
+        out = handle("attack", {"id": sid, "mode": args.mode})
+        if "error" in out:
+            print(out["error"])
             return 1
-        v = core.evaluate_shield(s["request"])
-        print(json.dumps({"expected": s["expected"], "verdict": v}, indent=2))
-        if args.strands:
-            print("--- strands ---")
-            print(json.dumps(invoke_for_payload(s["request"]), indent=2))
-        return 0 if v["decision"] == s["expected"] else 1
-
-    return 1
+        v = out["verdict"]
+        matched += out["matched_expected"]
+        print(f"{'OK  ' if out['matched_expected'] else 'MISS'} {sid:<24} {v['decision']:<10} {v['latency_ms']:>6}ms  {v['gate2']['mode']}:{v['gate2']['attack_class']} hijack={v['gate2']['hijack_likelihood']}")
+        if args.mode == "agent" or args.trace:
+            print(f"     summary: {v['operator_summary']}")
+            for step in v["trace"]:
+                print(f"     [{step['i']:02}] {step['kind']:<6} {step['name']:<28} {step['duration_ms']:>6}ms {step['status']}")
+    print(f"score {matched}/{len(ids)} ({args.mode})")
+    return 0 if matched == len(ids) else 1
 
 
 if __name__ == "__main__":

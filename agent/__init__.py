@@ -1,3 +1,3 @@
-"""AgentShield Strands agent — Professional Agents track."""
+"""AgentShield agent package."""
 
 __version__ = "0.1.0"
