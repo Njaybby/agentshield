@@ -56,3 +56,4 @@ build/
 # submission drafts, kept out of the repo
 notes/
 .clickhouse/
+contracts/broadcast/

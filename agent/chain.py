@@ -200,10 +200,8 @@ def onchain_ioc(target: str) -> dict[str, Any] | None:
         return None
 
     def fetch():
-        from eth_utils import function_abi_to_4byte_selector
-
-        selector = function_abi_to_4byte_selector(fn)
-        data = selector + target.lower().replace("0x", "").rjust(64, "0")
+        # keccak("getIOCByTarget(address)")[:4]. Hardcoded so we don't need a keccak backend at runtime.
+        data = "0x17644d69" + target.lower().replace("0x", "").rjust(64, "0")
         raw = _rpc(84532, "eth_call", [{"to": reg, "data": data}, "latest"])
         out_types = [o["type"] for o in fn["outputs"]]
         out_names = [o["name"] for o in fn["outputs"]]
