@@ -4,32 +4,32 @@
       <path d="M0,0 L10,5 L0,10 z" fill="#8a8a8a"/>
     </marker>
     <marker id="arrowRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#ef4444"/>
+      <path d="M0,0 L10,5 L0,10 z" fill="#a1a1aa"/>
     </marker>
     <style>
-      .bg { fill: #0a0a0a; }
-      .box { fill: #111111; stroke: #2a2a2a; stroke-width: 1; }
-      .boxRed { fill: #140c0c; stroke: #ef4444; stroke-width: 1.2; }
-      .runtime { fill: none; stroke: #ef4444; stroke-width: 1.4; stroke-dasharray: 6 4; }
+      .bg { fill: #0a0a0b; }
+      .box { fill: #111113; stroke: #2e2e33; stroke-width: 1; }
+      .boxRed { fill: #141417; stroke: #52525b; stroke-width: 1.2; }
+      .runtime { fill: none; stroke: #3f3f46; stroke-width: 1.2; stroke-dasharray: 5 4; }
       .hdr { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; letter-spacing: 1px; fill: #8a8a8a; }
-      .hdrRed { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; letter-spacing: 1px; fill: #ef4444; }
-      .title { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 30px; fill: #f0f0f0; }
+      .hdrRed { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; letter-spacing: 1px; fill: #ededef; }
+      .title { font-family: Geist, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-weight: 600; letter-spacing: -0.5px; font-size: 28px; fill: #ededef; }
       .name { font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; fill: #f0f0f0; }
       .line { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; fill: #c8c8c8; }
       .dim { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 10.5px; fill: #7a7a7a; }
       .edge { stroke: #8a8a8a; stroke-width: 1.2; fill: none; }
-      .edgeRed { stroke: #ef4444; stroke-width: 1.2; fill: none; }
-      .allow { fill: #22c55e; }
-      .quar { fill: #f5a524; }
-      .block { fill: #ef4444; }
+      .edgeRed { stroke: #a1a1aa; stroke-width: 1.2; fill: none; }
+      .allow { fill: #3ecf8e; }
+      .quar { fill: #f2b441; }
+      .block { fill: #f0565c; }
     </style>
   </defs>
 
   <rect class="bg" x="0" y="0" width="1200" height="800"/>
 
   <!-- Header -->
-  <text class="hdr" x="40" y="38">FDR-ARCH · AGENTSHIELD · STRANDS AGENTS · AMAZON BEDROCK · BASE 8453</text>
-  <text class="title" x="40" y="76">Pre-trade firewall for autonomous trading agents</text>
+  <text class="hdr" x="40" y="38">AGENTSHIELD · STRANDS AGENTS · AMAZON BEDROCK · BASE 8453</text>
+  <text class="title" x="40" y="76">Pre-signing review for autonomous trading agents</text>
 
   <!-- Column 1: actors -->
   <rect class="box" x="40" y="110" width="220" height="80"/>
@@ -57,7 +57,7 @@
   <!-- Column 2: Vercel app + facilitator + review queue -->
   <rect class="box" x="300" y="110" width="250" height="190"/>
   <text class="hdr" x="314" y="132">VERCEL · NEXT.JS</text>
-  <text class="name" x="314" y="156">Flight Recorder</text>
+  <text class="name" x="314" y="156">Landing + console</text>
   <text class="line" x="314" y="182">/soc  Attack Lab · Inspect</text>
   <text class="line" x="314" y="200">      Review · Analytics · CTI</text>
   <text class="line" x="314" y="224">/api/rpc  free, agent mode</text>
@@ -79,7 +79,7 @@
 
   <!-- Column 3: AgentCore runtime -->
   <rect class="runtime" x="585" y="100" width="580" height="485"/>
-  <text class="hdrRed" x="600" y="122">AGENT API · VERCEL PYTHON FUNCTION · AGENTCORE-READY · agent/api.py</text>
+  <text class="hdrRed" x="600" y="122">AGENT RUNTIME · AGENTCORE OR VERCEL · agent/api.py</text>
 
   <rect class="box" x="605" y="140" width="265" height="160"/>
   <text class="hdr" x="619" y="162">GATE 1 · DETERMINISTIC</text>
@@ -126,7 +126,7 @@
 
   <!-- Bottom: ClickHouse + registry -->
   <rect class="box" x="585" y="620" width="280" height="130"/>
-  <text class="hdr" x="599" y="642">CLICKHOUSE · FLIGHT RECORDER</text>
+  <text class="hdr" x="599" y="642">CLICKHOUSE · RECORDER</text>
   <text class="line" x="599" y="668">verdicts ReplacingMergeTree</text>
   <text class="line" x="599" y="686">trace_steps MergeTree</text>
   <text class="line" x="599" y="706">timeline · p50/p95/p99</text>
@@ -152,7 +152,7 @@
   <path class="edge" d="M1012,300 L1012,310 L1175,310 L1175,685 L1165,685" marker-end="url(#arrow)"/>
   <path class="edgeRed" d="M605,540 L570,540 L570,640 L550,640" marker-end="url(#arrowRed)"/>
   <path class="edge" d="M300,700 L280,700 L280,150 L260,150" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
-  <path class="edge" d="M880,170 L870,170 L870,120 L575,120 L575,600 L150,600 L150,620" marker-end="url(#arrow)"/>
+  <path class="edge" d="M880,170 L870,170 L870,90 L575,90 L575,600 L150,600 L150,620" marker-end="url(#arrow)"/>
 
   <text class="dim" x="40" y="785">Verdicts and full traces are stored in ClickHouse; function instances are stateless. Registry IOC addresses in the Attack Lab are lab fixtures.</text>
 </svg>
