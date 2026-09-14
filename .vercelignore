@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+.venv
+build
+notes
+agentcore
+contracts
+tests
+.next
+**/__pycache__

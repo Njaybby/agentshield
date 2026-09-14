@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Stage the AgentShield agent API as a standalone Vercel FastAPI project (used when AgentCore isn't available).
+"""Stage the agent API as a standalone Vercel FastAPI project.
 
-Writes build/vercel-api/ with the `agent` package, pyproject.toml (dependencies + Vercel entrypoint) and
-vercel.json. Secrets are NOT written: set them as Vercel environment variables.
+Writes build/vercel-api/ with the `agent` package, an app.py entrypoint, pyproject.toml and vercel.json. Secrets are NOT written: set them as Vercel environment variables.
 Usage: python scripts/stage_vercel_api.py && cd build/vercel-api && vercel deploy --prod
 """
 
@@ -29,15 +28,10 @@ dependencies = [
     "eth-utils >= 4.0.0",
     "clickhouse-connect >= 0.8.0",
 ]
-
-[tool.vercel]
-entrypoint = "agent.server:app"
 """
 
-VERCEL_JSON = {
-    "$schema": "https://openapi.vercel.sh/vercel.json",
-    "functions": {"agent/server.py": {"maxDuration": 60}},
-}
+# Fluid compute's default duration covers agent runs (10-40s), so no functions override is needed.
+VERCEL_JSON = {"$schema": "https://openapi.vercel.sh/vercel.json", "framework": "fastapi"}
 
 
 def main() -> None:
@@ -49,6 +43,8 @@ def main() -> None:
         ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "agentcore_app.py", "requirements.txt"),
     )
     (OUT / "pyproject.toml").write_text(PYPROJECT)
+    # Vercel detects a FastAPI `app` in app.py at the project root.
+    (OUT / "app.py").write_text("from agent.server import app  # noqa: F401\n")
     (OUT / "vercel.json").write_text(json.dumps(VERCEL_JSON, indent=2))
     (OUT / ".vercelignore").write_text(".env\n.venv\n__pycache__\n")
     print(f"Staged {OUT.relative_to(ROOT)}. Deploy: cd {OUT.relative_to(ROOT)} && vercel deploy --prod")

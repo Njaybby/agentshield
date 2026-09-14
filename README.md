@@ -6,7 +6,7 @@ It returns `ALLOW`, `BLOCK` or `QUARANTINE`. Quarantined transactions wait for a
 
 Built with the Strands Agents SDK for [Agents for Humans](https://agentsforhumans.devpost.com/), Professional Agents track.
 
-- Live demo: `<LIVE_DEMO_URL>` (console at `/soc`, no login)
+- Live demo: https://agentshield-lyart.vercel.app (console at `/soc`, no login)
 - Video: `<VIDEO_URL>`
 
 ## Why
@@ -130,7 +130,7 @@ npm install && npm run build && npm start                           # console on
 Sign only on `ALLOW`. On `QUARANTINE`, poll the verdict until an operator approves or denies it.
 
 ```bash
-curl -s <LIVE_DEMO_URL>/api/rpc -H 'content-type: application/json' -d '{
+curl -s https://agentshield-lyart.vercel.app/api/rpc -H 'content-type: application/json' -d '{
   "action": "shield",
   "mode": "fast",
   "request": {
@@ -223,7 +223,7 @@ forge script script/Deploy.s.sol --rpc-url $BASE_SEPOLIA_RPC_URL --broadcast
 
 Everything is free and needs no account.
 
-1. Open `<LIVE_DEMO_URL>/soc`.
+1. Open `https://agentshield-lyart.vercel.app/soc`.
 2. Attack Lab: **Run all** in Fast mode. Open a verdict for Gate 1, Gate 2, chain evidence and the trace.
 3. Switch to Agent mode and run A7. Takes 10 to 40 seconds; limited to 8 runs per 10 minutes per visitor.
 4. Review Queue: approve or deny a quarantined verdict (A6).
