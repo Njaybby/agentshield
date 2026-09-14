@@ -58,3 +58,6 @@ notes/
 .clickhouse/
 contracts/broadcast/
 /.next-*/
+# AgentCore CLI local state and logs
+agentcore/.cli/
+agentcore/.cache/

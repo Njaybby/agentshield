@@ -31,13 +31,8 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    ".next-a/types/**/*.ts",
-    ".next-b/types/**/*.ts",
-    ".next-c/types/**/*.ts",
-    ".next-verify/types/**/*.ts",
     ".next/types/**/*.ts",
-    "next-env.d.ts",
-    ".next-qa/types/**/*.ts"
+    "next-env.d.ts"
   ],
   "exclude": [
     "node_modules",
@@ -48,8 +43,6 @@
     "tests",
     "sdk",
     "notes",
-    ".next-a",
-    ".next-b",
-    ".next-c"
+    ".next-*"
   ]
 }
