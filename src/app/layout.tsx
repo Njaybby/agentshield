@@ -20,9 +20,9 @@ const instrument = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "AgentShield — NOKARA Labs | Pre-Trade Safety Oracle",
+  title: "AgentShield | NOKARA Labs",
   description:
-    "Strands professional agent that blocks prompt-injection drains and honeypots before your trading agent signs. Built by NOKARA Labs for Agents for Humans.",
+    "Pre-trade firewall for autonomous trading agents on Base: a Strands agent on Bedrock AgentCore that blocks prompt-injection drains and honeypots before the agent signs.",
 };
 
 export default function RootLayout({
@@ -31,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="bg-[#0a0a0a]">
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${instrument.variable} antialiased`}
       >
