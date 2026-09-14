@@ -4,7 +4,7 @@ import { RPC_ACTIONS, isOffline, type RpcAction } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 // Agent mode spends model tokens on every run, so the public demo caps it per client.
 // Best-effort per-instance limiter; fast mode stays unlimited.

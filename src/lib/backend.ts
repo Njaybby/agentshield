@@ -2,7 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import type { Offline } from "./types";
 
-const TIMEOUT_MS = 90_000;
+const TIMEOUT_MS = 115_000;
 
 function offline(err: unknown): Offline {
   const msg = err instanceof Error ? err.message : String(err);

@@ -8,7 +8,7 @@ import { isOffline, type Mode, type ShieldRequest } from "@/lib/types";
 // Internal UI traffic keeps using /api/rpc -> callBackend, unmetered.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 function isProposedTx(x: unknown): x is ShieldRequest["proposed_tx"] {
   if (!x || typeof x !== "object") return false;

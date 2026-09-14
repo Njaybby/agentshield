@@ -7,6 +7,8 @@ export type Severity = "info" | "medium" | "high" | "critical";
 export type ProvenanceSource = { type: string; content: string; url?: string };
 
 export type ProposedTx = {
+  /** The trading agent's own wallet (signer). */
+  from?: string;
   to: string;
   value_wei: string;
   data?: string;
