@@ -101,10 +101,14 @@ def lookup_address(address: str, chain_id: int = 8453) -> dict[str, Any]:
         "local_ioc": core.HONEYPOTS.get(address) or core.DRAINERS.get(address),
         "cti": core.match_cti([address], ""),
     }
-    try:
-        result["goplus"] = chain.goplus_address(chain_id, address)
-    except Exception as exc:
-        result["goplus_error"] = str(exc)[:120]
+    if result["label"]:
+        # GoPlus tags canonical contracts like WETH as "honeypot related" because scams route through them.
+        result["goplus"] = {"skipped": f"{result['label']} is a known canonical contract; association flags do not apply"}
+    else:
+        try:
+            result["goplus"] = chain.goplus_address(chain_id, address)
+        except Exception as exc:
+            result["goplus_error"] = str(exc)[:120]
     try:
         result["onchain_ioc"] = chain.onchain_ioc(address)
     except Exception as exc:
